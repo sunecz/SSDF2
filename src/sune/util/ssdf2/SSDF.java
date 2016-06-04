@@ -1,4 +1,4 @@
-package sune.util.ssdf;
+package sune.util.ssdf2;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
