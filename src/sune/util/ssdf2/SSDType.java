@@ -1,4 +1,4 @@
-package sune.util.ssdf;
+package sune.util.ssdf2;
 
 import java.util.regex.Pattern;
 
@@ -34,6 +34,7 @@ public enum SSDType {
 		}
 	},
 	DECIMAL("^(\\+|-)?(\\d+\\.(?:\\d+)?|\\.\\d+)$") {
+		
 		@Override
 		String fixValue(String value) {
 			StringBuilder sb = new StringBuilder();
