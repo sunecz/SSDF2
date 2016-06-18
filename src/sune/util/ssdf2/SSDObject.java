@@ -85,6 +85,16 @@ public class SSDObject implements SSDNode {
 	public <T> T value(Class<? extends T> clazz) { return fvalue.value(clazz); 	 }
 	
 	@Override
+	public boolean isObject() {
+		return true;
+	}
+	
+	@Override
+	public boolean isCollection() {
+		return false;
+	}
+	
+	@Override
 	public String toString() {
 		return toString(false);
 	}
