@@ -1,9 +1,15 @@
 package sune.util.ssdf2;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class SSDCollection implements SSDNode {
+public class SSDCollection implements SSDNode, Iterable<SSDNode> {
+	
+	public static enum SSDCollectionType {
+		ARRAY, OBJECT;
+	}
 	
 	private final SSDNode parent;
 	private final String name;
@@ -528,12 +534,25 @@ public class SSDCollection implements SSDNode {
 		return objects.size();
 	}
 	
-	public boolean isArray() {
-		return isArray;
+	@Override
+	public boolean isObject() {
+		return false;
 	}
 	
-	public boolean isObject() {
-		return !isArray;
+	@Override
+	public boolean isCollection() {
+		return true;
+	}
+	
+	public SSDCollectionType getType() {
+		return isArray ?
+				SSDCollectionType.ARRAY :
+				SSDCollectionType.OBJECT;
+	}
+	
+	public SSDNode[] getNodes() {
+		Collection<SSDNode> c = objects.values();
+		return c.toArray(new SSDNode[c.size()]);
 	}
 	
 	@Override
@@ -613,5 +632,29 @@ public class SSDCollection implements SSDNode {
 	
 	public String toJSON(boolean compress) {
 		return toString(1, compress, true);
+	}
+
+	@Override
+	public Iterator<SSDNode> iterator() {
+		return new SSDCollectionIterator(this);
+	}
+	
+	private static final class SSDCollectionIterator
+			implements Iterator<SSDNode> {
+		
+		final Iterator<SSDNode> iterator;
+		SSDCollectionIterator(SSDCollection collection) {
+			iterator = collection.objects.values().iterator();
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return iterator.hasNext();
+		}
+
+		@Override
+		public SSDNode next() {
+			return iterator.next();
+		}
 	}
 }

@@ -10,6 +10,35 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import sune.util.ssdf2.SSDCollection.SSDCollectionType;
+
+/**
+ * Main class where whole logic of reading SSD files is located.
+ * <br><br>
+ * This class contains several methods used for creating SSD Collections
+ * that are further used to do all needed operations with a SSD file.
+ * These methods provides an easy way to create SSD Collections from a
+ * String, an input stream, a file, or even a JSON String.
+ * <br><br>
+ * SSDF syntax is similar to JSON syntax, except that names of items are
+ * not in quotes:<br>
+ * <pre>
+ * {
+ *     users: [
+ *         {
+ *             name:    "user04",
+ *             profile: "http://example.org/profiles/user04",
+ *             hash:    "fe1gs501f51gh4dangdhfg50g4df6g4asd"
+ *         },
+ *         #... and so on
+ *     ]
+ * }</pre>
+ * <b>Note:</b> Conversion between JSON and SSDF format is fully supported.
+ * To convert any SSDF String to formatted JSON the SSDCollection's method
+ * {@link SSDCollection#toJSON()} can be used, this method also supports
+ * compression of the outputing JSON String which can be obtained using
+ * the {@link SSDCollection#toJSON(boolean)} method.
+ * @author Sune*/
 public final class SSDF {
 	
 	private static final char CHAR_OBJECT_OB 	  = '{';
@@ -134,7 +163,8 @@ public final class SSDF {
 								}
 							}
 						}
-						SSDCollection arr = new SSDCollection(parent, tempName, isarr);
+						if(array) tempName = Integer.toString(counter++);
+						SSDCollection arr  = new SSDCollection(parent, tempName, isarr);
 						arr.addObjects(readObjects(chars, i+1, f, arr, isarr));
 						map.put(tempName, arr);
 						tempName = null;
@@ -143,7 +173,6 @@ public final class SSDF {
 						tempName = temp.toString();
 						temp.setLength(0);
 					} else if(c == CHAR_ITEM_DELIMITER) {
-						if(array) tempName = Integer.toString(counter++);
 						if(tempName != null) {
 							map.put(tempName, new SSDObject(parent, tempName, temp.toString()));
 							temp.setLength(0);
@@ -191,6 +220,38 @@ public final class SSDF {
 		return SSDF.class.getResourceAsStream(path);
 	}
 	
+	static final SSDCollection convertJSONNames(SSDCollection sc) {
+		String cname 	 = sc.getName();
+		SSDCollection nc = cname.isEmpty() ?
+			SSDCollection.empty() :
+			new SSDCollection(
+				sc.getParent(),
+				cname.substring(1, cname.length()-1),
+				sc.getType() == SSDCollectionType.ARRAY
+			);
+		for(Entry<String, SSDNode> e : sc.objects().entrySet()) {
+			String name   = e.getKey();
+			SSDNode value = e.getValue();
+			String fname  = name.substring(1, name.length()-1);
+			if(value instanceof SSDCollection) {
+				SSDCollection vc = (SSDCollection) value;
+				SSDCollection kc = vc.getType() == SSDCollectionType.ARRAY ?
+					new SSDCollection(vc.getParent(), fname, true, vc.objects()) :
+					convertJSONNames(vc);
+				nc.addObject(fname, kc);
+			} else if(value instanceof SSDObject) {
+				SSDObject oo = (SSDObject) value;
+				SSDObject no = new SSDObject(oo.getParent(), fname, oo.getType(),
+					oo.getValue(), oo.getFormattedValue());
+				nc.addObject(fname, no);
+			}
+		}
+		return nc;
+	}
+	
+	/**
+	 * Creates a new empty SSDCollection.
+	 * @return A new empty SSDCollection.*/
 	public static final SSDCollection empty() {
 		return SSDCollection.empty();
 	}
@@ -225,35 +286,6 @@ public final class SSDF {
 			throw new IllegalStateException(
 				"An error has occurred while trying to read the given file!");
 		}
-	}
-	
-	static final SSDCollection convertJSONNames(SSDCollection sc) {
-		String cname 	 = sc.getName();
-		SSDCollection nc = cname.isEmpty() ?
-			SSDCollection.empty() :
-			new SSDCollection(
-				sc.getParent(),
-				cname.substring(1, cname.length()-1),
-				sc.isArray()
-			);
-		for(Entry<String, SSDNode> e : sc.objects().entrySet()) {
-			String name   = e.getKey();
-			SSDNode value = e.getValue();
-			String fname  = name.substring(1, name.length()-1);
-			if(value instanceof SSDCollection) {
-				SSDCollection vc = (SSDCollection) value;
-				SSDCollection kc = vc.isArray() ?
-					new SSDCollection(vc.getParent(), fname, true, vc.objects()) :
-					convertJSONNames(vc);
-				nc.addObject(fname, kc);
-			} else if(value instanceof SSDObject) {
-				SSDObject oo = (SSDObject) value;
-				SSDObject no = new SSDObject(oo.getParent(), fname, oo.getType(),
-					oo.getValue(), oo.getFormattedValue());
-				nc.addObject(fname, no);
-			}
-		}
-		return nc;
 	}
 	
 	public static final SSDCollection readJSON(String json) {
