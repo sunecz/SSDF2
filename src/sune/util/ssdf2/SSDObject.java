@@ -2,9 +2,12 @@ package sune.util.ssdf2;
 
 public class SSDObject implements SSDNode {
 	
-	private final SSDNode parent;
-	private final String name;
-	private final SSDType type;
+	// Protected properties
+	protected final SSDProperty<SSDNode> parent;
+	protected final SSDProperty<String>  name;
+	
+	// Private properties
+	private final SSDType  type;
 	private final SSDValue value;
 	// Formatted value
 	private final SSDValue fvalue;
@@ -14,8 +17,8 @@ public class SSDObject implements SSDNode {
 		SSDValue val  = new SSDValue(value);
 		SSDValue fval = type.format(value);
 		checkArgs(name, type, fval);
-		this.parent = parent;
-		this.name 	= name;
+		this.parent = new SSDProperty<>(parent);
+		this.name 	= new SSDProperty<>(name);
 		this.type 	= type;
 		this.value	= val;
 		this.fvalue = fval;
@@ -23,8 +26,8 @@ public class SSDObject implements SSDNode {
 	
 	SSDObject(SSDNode parent, String name, SSDType type, SSDValue value, SSDValue fvalue) {
 		checkArgs(name, type, value);
-		this.parent = parent;
-		this.name 	= name;
+		this.parent = new SSDProperty<>(parent);
+		this.name 	= new SSDProperty<>(name);
 		this.type 	= type;
 		this.value 	= value;
 		this.fvalue = fvalue;
@@ -47,17 +50,18 @@ public class SSDObject implements SSDNode {
 	
 	@Override
 	public SSDNode getParent() {
-		return parent;
+		return parent.get();
 	}
 	
 	@Override
 	public String getName() {
-		return name;
+		return name.get();
 	}
 	
 	@Override
 	public String getFullName() {
-		return (parent == null ? "" : (parent.getFullName() + ".")) +
+		SSDNode p = parent.get();
+		return (p == null ? "" : (p.getFullName() + ".")) +
 			   (getName());
 	}
 	

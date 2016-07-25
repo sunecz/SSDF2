@@ -226,18 +226,26 @@ public final class SSDF {
 			SSDCollection.empty() :
 			new SSDCollection(
 				sc.getParent(),
-				cname.substring(1, cname.length()-1),
+				cname.startsWith("\"") && cname.endsWith("\"") ?
+					cname.substring(1, cname.length()-1) :
+					cname,
 				sc.getType() == SSDCollectionType.ARRAY
 			);
 		for(Entry<String, SSDNode> e : sc.objects().entrySet()) {
 			String name   = e.getKey();
 			SSDNode value = e.getValue();
-			String fname  = name.substring(1, name.length()-1);
+			String fname  = name.startsWith("\"") && name.endsWith("\"") ?
+								name.substring(1, name.length()-1) :
+								name;
 			if(value instanceof SSDCollection) {
 				SSDCollection vc = (SSDCollection) value;
-				SSDCollection kc = vc.getType() == SSDCollectionType.ARRAY ?
-					new SSDCollection(vc.getParent(), fname, true, vc.objects()) :
-					convertJSONNames(vc);
+				SSDCollection kc = convertJSONNames(
+					vc.getType() == SSDCollectionType.ARRAY ?
+						new SSDCollection(vc.getParent(),
+										  fname,
+										  true,
+										  vc.objects()) :
+						vc);
 				nc.addObject(fname, kc);
 			} else if(value instanceof SSDObject) {
 				SSDObject oo = (SSDObject) value;
@@ -254,6 +262,10 @@ public final class SSDF {
 	 * @return A new empty SSDCollection.*/
 	public static final SSDCollection empty() {
 		return SSDCollection.empty();
+	}
+	
+	public static final SSDCollection emptyArray() {
+		return SSDCollection.empty(true);
 	}
 	
 	public static final SSDCollection read(String content) {
@@ -290,5 +302,13 @@ public final class SSDF {
 	
 	public static final SSDCollection readJSON(String json) {
 		return convertJSONNames(read(json));
+	}
+	
+	public static final SSDCollection readJSON(InputStream stream) {
+		return convertJSONNames(read(stream));
+	}
+	
+	public static final SSDCollection readJSON(File file) {
+		return convertJSONNames(read(file));
 	}
 }
