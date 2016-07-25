@@ -11,10 +11,10 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		ARRAY, OBJECT;
 	}
 	
-	private final SSDNode parent;
-	private final String name;
-	private final boolean isArray;
+	private final SSDProperty<SSDNode> parent;
+	private final SSDProperty<String>  name;
 	private final Map<String, SSDNode> objects;
+	private final boolean 			   isArray;
 	
 	SSDCollection(SSDNode parent, String name, boolean isArray) {
 		this(parent, name, isArray, new LinkedHashMap<>());
@@ -23,8 +23,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	SSDCollection(SSDNode parent, String name, boolean isArray,
 			Map<String, SSDNode> objects) {
 		checkArgs(name, objects);
-		this.parent  = parent;
-		this.name 	 = name;
+		this.parent  = new SSDProperty<>(parent);
+		this.name 	 = new SSDProperty<>(name);
 		this.isArray = isArray;
 		this.objects = objects;
 	}
@@ -106,10 +106,6 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		// Name is a simple name
 		else {
 			SSDNode node = objects.get(name);
-			if(node == null) {
-				throw new RuntimeException(
-					"Object " + name + " does not exist!");
-			}
 			if(checkObject && node instanceof SSDCollection) {
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDObject!");
@@ -294,29 +290,49 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			// is not in this array but somewhere in its arrays
 			int index;
 			if((index = name.indexOf('.')) > -1) {
-				String aname = name.substring(0, index);
-				if(!node.has0(aname)) {
-					throw new RuntimeException(
-						"Object " + node.getFullName() + " does not contain " +
-						aname + "!");
+				String 		  aname = name.substring(0, index);
+				SSDCollection coll  = node.getCollection(aname);
+				// If the collection does not exist, create one
+				// with the needed name
+				if((coll == null)) {
+					// Get the next object name
+					String nextName = name.substring(index+1);
+					// Format the name if needed
+					int index0;
+					if((index0 = nextName.indexOf('.')) > -1) {
+						// Trim the name so it is only one part
+						// (between two dots)
+						nextName = nextName.substring(0, index0);
+					}
+					// Decide whether the new collection should be array
+					boolean array = nextName.matches("\\d+");
+					// Create a new collection with all needed data
+					coll = new SSDCollection(node, aname, array);
+					// Add the created collection
+					node.set(aname, coll);
 				}
-				node = node.getCollection(aname);
+				// Set the collection for the next loop
+				node = coll;
 				name = name.substring(index+1);
 			}
 			// Name is a simple name
 			else {
-				if(!add && !node.has0(name)) {
-					throw new RuntimeException(
-						"Object " + node.getFullName() + " does not contain " +
-						name + "!");
-				}
 				// Create a new node of the desired type
 				SSDNode newNode = null;
 				if(value instanceof SSDCollection) {
-					SSDCollection oldc = (SSDCollection) value;
-					SSDCollection newc = new SSDCollection(node, name, oldc.isArray);
-					newc.addObjects(oldc.objects);
-					newNode = newc;
+					SSDCollection coll = (SSDCollection) value;
+					// Change properties of the collection
+					coll.parent.set(node);
+					coll.name  .set(name);
+					// Change value of the new node
+					newNode = coll;
+				} else if(value instanceof SSDObject) {
+					SSDObject obj = (SSDObject) value;
+					// Change properties of the object
+					obj.parent.set(node);
+					obj.name  .set(name);
+					// Change value of the new node
+					newNode = obj;
 				} else if(value instanceof String) {
 					newNode = type.createObject(node, name, (String) value);
 				}
@@ -374,6 +390,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		set(name, SSDType.STRING, value, false);
 	}
 	
+	public void set(String name, SSDObject object) {
+		checkIfObject();
+		set(name, SSDType.UNKNOWN, object, false);
+	}
+	
 	public void set(String name, SSDCollection collection) {
 		checkIfObject();
 		set(name, SSDType.UNKNOWN, collection, false);
@@ -422,6 +443,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	public void set(int index, String value) {
 		checkIfArray();
 		set(Integer.toString(index), SSDType.STRING, value, false);
+	}
+	
+	public void set(int index, SSDObject object) {
+		checkIfArray();
+		set(Integer.toString(index), SSDType.UNKNOWN, object, false);
 	}
 	
 	public void set(int index, SSDCollection collection) {
@@ -474,6 +500,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		set(name, SSDType.STRING, value, true);
 	}
 	
+	public void add(String name, SSDObject object) {
+		checkIfObject();
+		set(name, SSDType.UNKNOWN, object, true);
+	}
+	
 	public void add(String name, SSDCollection collection) {
 		checkIfObject();
 		set(name, SSDType.UNKNOWN, collection, true);
@@ -524,6 +555,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		set(Integer.toString(nextIndex()), SSDType.STRING, value, true);
 	}
 	
+	public void add(SSDObject object) {
+		checkIfArray();
+		set(Integer.toString(nextIndex()), SSDType.UNKNOWN, object, true);
+	}
+	
 	public void add(SSDCollection collection) {
 		checkIfArray();
 		set(Integer.toString(nextIndex()), SSDType.UNKNOWN, collection, true);
@@ -557,18 +593,24 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	@Override
 	public SSDNode getParent() {
-		return parent;
+		return parent.get();
 	}
 	
 	@Override
 	public String getName() {
-		return name;
+		return name.get();
 	}
 	
 	@Override
 	public String getFullName() {
-		return (parent == null ? "" : (parent.getFullName() + ".")) +
+		SSDNode p = parent.get();
+		return (p == null ? "" : (p.getFullName() + ".")) +
 			   (getName());
+	}
+	
+	public SSDCollection copy() {
+		return new SSDCollection(getParent(), getName(), isArray,
+				new LinkedHashMap<>(objects));
 	}
 	
 	String tabString(int level) {
