@@ -7,15 +7,15 @@ public final class SSDValue {
 		this.value = value;
 	}
 	
-	public boolean booleanValue() { return (boolean) value; }
-	public byte byteValue() 	  { return (byte) 	 value; }
-	public short shortValue() 	  { return (short) 	 value; }
-	public int intValue() 		  { return (int) 	 value; }
-	public long longValue() 	  { return (long) 	 value; }
-	public float floatValue() 	  { return (float) 	 value; }
-	public double doubleValue()   { return (double)  value; }
-	public String stringValue()   { return (String)  value; }
-	public Object value() 		  { return 			 value; }
+	public boolean booleanValue() { return Boolean.valueOf(toString()); }
+	public byte byteValue() 	  { return Byte	  .valueOf(toString()); }
+	public short shortValue() 	  { return Short  .valueOf(toString()); }
+	public int intValue() 		  { return Integer.valueOf(toString()); }
+	public long longValue() 	  { return Long	  .valueOf(toString()); }
+	public float floatValue() 	  { return Float  .valueOf(toString()); }
+	public double doubleValue()   { return Double .valueOf(toString()); }
+	public String stringValue()   { return toString(); }
+	public Object value() 		  { return value; }
 	
 	@SuppressWarnings("unchecked")
 	<T> T cast(Class<? extends T> clazz) {
