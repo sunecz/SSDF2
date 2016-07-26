@@ -104,6 +104,7 @@ public class SSDObject implements SSDNode {
 	}
 	
 	public String toString(boolean compress) {
+		// No compression can be done here
 		return value == null ? "null" : value.toString();
 	}
 }

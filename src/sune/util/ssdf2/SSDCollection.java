@@ -133,6 +133,38 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return (SSDCollection) get0(name, false, true);
 	}
 	
+	public boolean getBoolean(String name) {
+		return getObject(name).booleanValue();
+	}
+	
+	public byte getByte(String name) {
+		return getObject(name).byteValue();
+	}
+	
+	public short getShort(String name) {
+		return getObject(name).shortValue();
+	}
+	
+	public int getInt(String name) {
+		return getObject(name).intValue();
+	}
+	
+	public long getLong(String name) {
+		return getObject(name).longValue();
+	}
+	
+	public float getFloat(String name) {
+		return getObject(name).floatValue();
+	}
+	
+	public double getDouble(String name) {
+		return getObject(name).doubleValue();
+	}
+	
+	public String getString(String name) {
+		return getObject(name).stringValue();
+	}
+	
 	public SSDNode get(int index) {
 		checkIfArray();
 		return get0(Integer.toString(index), false, false);
@@ -146,6 +178,38 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	public SSDCollection getCollection(int index) {
 		checkIfArray();
 		return (SSDCollection) get0(Integer.toString(index), false, true);
+	}
+	
+	public boolean getBoolean(int index) {
+		return getObject(index).booleanValue();
+	}
+	
+	public byte getByte(int index) {
+		return getObject(index).byteValue();
+	}
+	
+	public short getShort(int index) {
+		return getObject(index).shortValue();
+	}
+	
+	public int getInt(int index) {
+		return getObject(index).intValue();
+	}
+	
+	public long getLong(int index) {
+		return getObject(index).longValue();
+	}
+	
+	public float getFloat(int index) {
+		return getObject(index).floatValue();
+	}
+	
+	public double getDouble(int index) {
+		return getObject(index).doubleValue();
+	}
+	
+	public String getString(int index) {
+		return getObject(index).stringValue();
 	}
 	
 	private final void remove(String name, boolean checkObject, boolean checkCollection) {
@@ -267,6 +331,36 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return has(name, false, true);
 	}
 	
+	public boolean hasNull(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.NULL;
+	}
+	
+	public boolean hasBoolean(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.BOOLEAN;
+	}
+	
+	public boolean hasInteger(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.INTEGER;
+	}
+	
+	public boolean hasDecimal(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.DECIMAL;
+	}
+	
+	public boolean hasString(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.STRING;
+	}
+	
 	public boolean has(int index) {
 		checkIfArray();
 		return has(Integer.toString(index), false, false);
@@ -280,6 +374,36 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	public boolean hasCollection(int index) {
 		checkIfArray();
 		return has(Integer.toString(index), false, true);
+	}
+	
+	public boolean hasNull(int index) {
+		SSDObject obj = getObject(index);
+		return obj != null &&
+			   obj.getType() == SSDType.NULL;
+	}
+	
+	public boolean hasBoolean(int index) {
+		SSDObject obj = getObject(index);
+		return obj != null &&
+			   obj.getType() == SSDType.BOOLEAN;
+	}
+	
+	public boolean hasInteger(int index) {
+		SSDObject obj = getObject(index);
+		return obj != null &&
+			   obj.getType() == SSDType.INTEGER;
+	}
+	
+	public boolean hasDecimal(int index) {
+		SSDObject obj = getObject(index);
+		return obj != null &&
+			   obj.getType() == SSDType.DECIMAL;
+	}
+	
+	public boolean hasString(int index) {
+		SSDObject obj = getObject(index);
+		return obj != null &&
+			   obj.getType() == SSDType.STRING;
 	}
 	
 	private final void set(String name, SSDType type, Object value, boolean add) {
@@ -611,6 +735,19 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	public SSDCollection copy() {
 		return new SSDCollection(getParent(), getName(), isArray,
 				new LinkedHashMap<>(objects));
+	}
+	
+	public SSDCollection filter(SSDFilter filter) {
+		SSDCollection cl = empty();
+		for(SSDNode node : this) {
+			// Filter each node
+			if(filter.accept(node)) {
+				String name = node.getName();
+				if(node.isCollection()) cl.set(name, (SSDCollection) node);
+				else 					cl.set(name, (SSDObject) 	   node);
+			}
+		}
+		return cl;
 	}
 	
 	String tabString(int level) {
