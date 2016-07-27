@@ -8,4 +8,7 @@ public interface SSDNode {
 	public String getFullName();
 	public String getName();
 	public String toString(boolean compress);
+	public SSDAnnotation getAnnotation(String name);
+	public SSDAnnotation[] getAnnotations();
+	public SSDAnnotation[] getAnnotations(String name);
 }

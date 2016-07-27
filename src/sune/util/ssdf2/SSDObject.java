@@ -1,5 +1,11 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.CHAR_SPACE;
+import static sune.util.ssdf2.SSDF.WORD_NULL;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class SSDObject implements SSDNode {
 	
 	// Protected properties
@@ -12,6 +18,9 @@ public class SSDObject implements SSDNode {
 	// Formatted value
 	private final SSDValue fvalue;
 	
+	// Annotations
+	private final List<SSDAnnotation> annotations;
+	
 	SSDObject(SSDNode parent, String name, String value) {
 		SSDType type  = SSDType.recognize(value);
 		SSDValue val  = new SSDValue(value);
@@ -22,6 +31,8 @@ public class SSDObject implements SSDNode {
 		this.type 	= type;
 		this.value	= val;
 		this.fvalue = fval;
+		// Annotations
+		this.annotations = new ArrayList<>();
 	}
 	
 	SSDObject(SSDNode parent, String name, SSDType type, SSDValue value, SSDValue fvalue) {
@@ -31,6 +42,8 @@ public class SSDObject implements SSDNode {
 		this.type 	= type;
 		this.value 	= value;
 		this.fvalue = fvalue;
+		// Annotations
+		this.annotations = new ArrayList<>();
 	}
 	
 	static final void checkArgs(String name, SSDType type, SSDValue value) {
@@ -48,6 +61,12 @@ public class SSDObject implements SSDNode {
 		}
 	}
 	
+	void addAnnotations(List<SSDAnnotation> annotations) {
+		if(annotations != null) {
+			this.annotations.addAll(annotations);
+		}
+	}
+	
 	@Override
 	public SSDNode getParent() {
 		return parent.get();
@@ -61,7 +80,7 @@ public class SSDObject implements SSDNode {
 	@Override
 	public String getFullName() {
 		SSDNode p = parent.get();
-		return (p == null ? "" : (p.getFullName() + ".")) +
+		return (p == null ? "" : (p.getFullName() + CHAR_SPACE)) +
 			   (getName());
 	}
 	
@@ -89,6 +108,28 @@ public class SSDObject implements SSDNode {
 	public <T> T value(Class<? extends T> clazz) { return fvalue.value(clazz); 	 }
 	
 	@Override
+	public SSDAnnotation getAnnotation(String name) {
+		for(SSDAnnotation ann : annotations)
+			if(ann.getName().equals(name))
+				return ann;
+		return null;
+	}
+	
+	@Override
+	public SSDAnnotation[] getAnnotations() {
+		return annotations.toArray(new SSDAnnotation[annotations.size()]);
+	}
+	
+	@Override
+	public SSDAnnotation[] getAnnotations(String name) {
+		List<SSDAnnotation> list = new ArrayList<>();
+		for(SSDAnnotation ann : annotations)
+			if(ann.getName().equals(name))
+				list.add(ann);
+		return list.toArray(new SSDAnnotation[list.size()]);
+	}
+	
+	@Override
 	public boolean isObject() {
 		return true;
 	}
@@ -105,6 +146,6 @@ public class SSDObject implements SSDNode {
 	
 	public String toString(boolean compress) {
 		// No compression can be done here
-		return value == null ? "null" : value.toString();
+		return value == null ? WORD_NULL : value.toString();
 	}
 }

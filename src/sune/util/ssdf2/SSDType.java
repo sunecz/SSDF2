@@ -1,21 +1,27 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
+import static sune.util.ssdf2.SSDF.CHAR_SINGLE_QUOTES;
+import static sune.util.ssdf2.SSDF.WORD_FALSE;
+import static sune.util.ssdf2.SSDF.WORD_NULL;
+import static sune.util.ssdf2.SSDF.WORD_TRUE;
+
 import java.util.regex.Pattern;
 
 public enum SSDType {
 	
-	NULL("^(null)$") {
+	NULL("^("+WORD_NULL+")$") {
 		
 		@Override
 		String fixValue(String value) {
-			return "null";
+			return WORD_NULL;
 		}
 	},
-	BOOLEAN("^(true|false)$") {
+	BOOLEAN("^("+WORD_TRUE+"|"+WORD_FALSE+")$") {
 		
 		@Override
 		String fixValue(String value) {
-			return "false";
+			return WORD_FALSE;
 		}
 	},
 	INTEGER("^(\\+|-)?(\\d+)$") {
@@ -77,24 +83,24 @@ public enum SSDType {
 		String fixValue(String value) {
 			value = value.trim();
 			// Fix left quote
-			if(value.indexOf('"')  != 0 &&
-			   value.indexOf('\'') != 0) {
-				value = '"' + value;
+			if(value.indexOf(CHAR_DOUBLE_QUOTES) != 0 &&
+			   value.indexOf(CHAR_SINGLE_QUOTES) != 0) {
+				value = CHAR_DOUBLE_QUOTES + value;
 			}
 			// Fix right quote
 			int len1 = value.length()-1;
-			if(value.indexOf('"')  != len1 &&
-			   value.indexOf('\'') != len1) {
-				value = value + '"';
+			if(value.indexOf(CHAR_DOUBLE_QUOTES) != len1 &&
+			   value.indexOf(CHAR_SINGLE_QUOTES) != len1) {
+				value = value + CHAR_DOUBLE_QUOTES;
 			}
 			// Escape all the inner characters
 			StringBuilder sb = new StringBuilder();
 			char[] chars	 = value.toCharArray();
 			for(int i = 0, l = chars.length, c; i < l; ++i) {
 				c = chars[i];
-				if(c == '"' && i != 0 && i != l-1) {
+				if(c == CHAR_DOUBLE_QUOTES && i != 0 && i != l-1) {
 					sb.append('\\');
-					sb.append('"');
+					sb.append(CHAR_DOUBLE_QUOTES);
 				} else sb.append((char) c);
 			}
 			return sb.toString();
