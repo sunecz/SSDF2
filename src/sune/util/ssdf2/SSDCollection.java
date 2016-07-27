@@ -1,8 +1,23 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.CHAR_ARRAY_CB;
+import static sune.util.ssdf2.SSDF.CHAR_ARRAY_OB;
+import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
+import static sune.util.ssdf2.SSDF.CHAR_ITEM_DELIMITER;
+import static sune.util.ssdf2.SSDF.CHAR_NAME_DELIMITER;
+import static sune.util.ssdf2.SSDF.CHAR_NEWLINE;
+import static sune.util.ssdf2.SSDF.CHAR_NV_DELIMITER;
+import static sune.util.ssdf2.SSDF.CHAR_OBJECT_CB;
+import static sune.util.ssdf2.SSDF.CHAR_OBJECT_OB;
+import static sune.util.ssdf2.SSDF.CHAR_SPACE;
+import static sune.util.ssdf2.SSDF.CHAR_TAB;
+import static sune.util.ssdf2.SSDF.WORD_NULL;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SSDCollection implements SSDNode, Iterable<SSDNode> {
@@ -16,21 +31,27 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	private final Map<String, SSDNode> objects;
 	private final boolean 			   isArray;
 	
+	// Annotations
+	private final List<SSDAnnotation> annotations;
+	
 	SSDCollection(SSDNode parent, String name, boolean isArray) {
-		this(parent, name, isArray, new LinkedHashMap<>());
+		this(parent, name, isArray, new LinkedHashMap<>(), new ArrayList<>());
 	}
 	
 	SSDCollection(SSDNode parent, String name, boolean isArray,
-			Map<String, SSDNode> objects) {
-		checkArgs(name, objects);
+			Map<String, SSDNode> objects,
+			List<SSDAnnotation> annotations) {
+		checkArgs(parent, name, objects);
 		this.parent  = new SSDProperty<>(parent);
 		this.name 	 = new SSDProperty<>(name);
 		this.isArray = isArray;
 		this.objects = objects;
+		// Annotations
+		this.annotations = annotations;
 	}
 	
-	static final void checkArgs(String name, Map<String, SSDNode> objects) {
-		if(name == null) {
+	static final void checkArgs(SSDNode parent, String name, Map<String, SSDNode> objects) {
+		if(name == null && parent != null) {
 			throw new IllegalArgumentException(
 				"Name of a collection cannot be null!");
 		}
@@ -80,6 +101,17 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return objects;
 	}
 	
+	void addAnnotations(List<SSDAnnotation> annotations) {
+		if(annotations != null) {
+			this.annotations.addAll(annotations);
+		}
+	}
+	
+	// Annotations
+	List<SSDAnnotation> annotations() {
+		return annotations;
+	}
+	
 	int nextIndex() {
 		return objects.size();
 	}
@@ -97,7 +129,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		// Name is a complex name, that means that the object
 		// is not in this array but somewhere in its arrays
 		int index;
-		if((index = name.indexOf('.')) > -1) {
+		if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
 			// Get name of the array
 			String aname = name.substring(0, index);
 			String rname = name.substring(index+1);
@@ -217,7 +249,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		// Name is a complex name, that means that the object
 		// is not in this array but somewhere in its arrays
 		int index;
-		if((index = name.indexOf('.')) > -1) {
+		if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
 			// Get name of the array
 			String aname = name.substring(0, index);
 			String rname = name.substring(index+1);
@@ -290,7 +322,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			// Name is a complex name, that means that the object
 			// is not in this array but somewhere in its arrays
 			int index;
-			if((index = name.indexOf('.')) > -1) {
+			if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
 				String aname = name.substring(0, index);
 				if(!node.has0(aname)) return false;
 				node = node.getCollection(aname);
@@ -413,7 +445,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			// Name is a complex name, that means that the object
 			// is not in this array but somewhere in its arrays
 			int index;
-			if((index = name.indexOf('.')) > -1) {
+			if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
 				String 		  aname = name.substring(0, index);
 				SSDCollection coll  = node.getCollection(aname);
 				// If the collection does not exist, create one
@@ -423,7 +455,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					String nextName = name.substring(index+1);
 					// Format the name if needed
 					int index0;
-					if((index0 = nextName.indexOf('.')) > -1) {
+					if((index0 = nextName.indexOf(CHAR_NAME_DELIMITER)) > -1) {
 						// Trim the name so it is only one part
 						// (between two dots)
 						nextName = nextName.substring(0, index0);
@@ -471,7 +503,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void setNull(String name) {
 		checkIfObject();
-		set(name, SSDType.NULL, "null", false);
+		set(name, SSDType.NULL, WORD_NULL, false);
 	}
 	
 	public void set(String name, boolean value) {
@@ -526,7 +558,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void setNull(int index) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.NULL, "null", false);
+		set(Integer.toString(index), SSDType.NULL, WORD_NULL, false);
 	}
 	
 	public void set(int index, boolean value) {
@@ -581,7 +613,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void addNull(String name) {
 		checkIfObject();
-		set(name, SSDType.NULL, "null", true);
+		set(name, SSDType.NULL, WORD_NULL, true);
 	}
 	
 	public void add(String name, boolean value) {
@@ -636,7 +668,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void addNull() {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.NULL, "null", true);
+		set(Integer.toString(nextIndex()), SSDType.NULL, WORD_NULL, true);
 	}
 	
 	public void add(boolean value) {
@@ -728,13 +760,35 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	@Override
 	public String getFullName() {
 		SSDNode p = parent.get();
-		return (p == null ? "" : (p.getFullName() + ".")) +
+		return (p == null ? "" : (p.getFullName() + CHAR_NAME_DELIMITER)) +
 			   (getName());
+	}
+	
+	@Override
+	public SSDAnnotation getAnnotation(String name) {
+		for(SSDAnnotation ann : annotations)
+			if(ann.getName().equals(name))
+				return ann;
+		return null;
+	}
+	
+	@Override
+	public SSDAnnotation[] getAnnotations() {
+		return annotations.toArray(new SSDAnnotation[annotations.size()]);
+	}
+	
+	@Override
+	public SSDAnnotation[] getAnnotations(String name) {
+		List<SSDAnnotation> list = new ArrayList<>();
+		for(SSDAnnotation ann : annotations)
+			if(ann.getName().equals(name))
+				list.add(ann);
+		return list.toArray(new SSDAnnotation[list.size()]);
 	}
 	
 	public SSDCollection copy() {
 		return new SSDCollection(getParent(), getName(), isArray,
-				new LinkedHashMap<>(objects));
+			new LinkedHashMap<>(objects), new ArrayList<>(annotations));
 	}
 	
 	public SSDCollection filter(SSDFilter filter) {
@@ -753,35 +807,59 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	String tabString(int level) {
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0; i < level; ++i)
-			sb.append('\t');
+			sb.append(CHAR_TAB);
 		return sb.toString();
 	}
 	
 	String toString(int depth, boolean compress, boolean json) {
 		String tab0 	 = tabString(depth-1);
-		String tab1 	 = tab0 + '\t';
+		String tab1 	 = tab0 + CHAR_TAB;
 		StringBuilder sb = new StringBuilder();
-		sb.append(isArray ? '[' : '{');
+		// Append all annotations
+		if(depth == 1 && !annotations.isEmpty() && !json) {
+			boolean annf = true;
+			for(SSDAnnotation ann : annotations) {
+				if(annf) 	  annf = false; else
+				if(!compress) sb.append(CHAR_NEWLINE);
+				sb.append(ann.toString(compress));
+			}
+			if(!compress) sb.append(CHAR_NEWLINE);
+		}
+		sb.append(isArray ? CHAR_ARRAY_OB : CHAR_OBJECT_OB);
 		if(!compress && !objects.isEmpty())
-			sb.append('\n');
+			sb.append(CHAR_NEWLINE);
 		boolean first = true;
 		for(SSDNode node : objects.values()) {
-			if(first) {
+			if((first)) {
 				first = false;
 			} else {
-				sb.append(',');
+				sb.append(CHAR_ITEM_DELIMITER);
 				if(!compress) {
-					sb.append('\n');
+					sb.append(CHAR_NEWLINE);
+				}
+			}
+			// Append all node's annotations
+			if(!json) {
+				SSDAnnotation[] anns;
+				if((anns = node.getAnnotations()).length > 0) {
+					boolean annf = true;
+					for(SSDAnnotation ann : anns) {
+						if(annf) 	  annf = false; else
+						if(!compress) sb.append(CHAR_NEWLINE);
+						if(!compress) sb.append(tab1);
+						sb.append(ann.toString(compress));
+					}
+					if(!compress) sb.append(CHAR_NEWLINE);
 				}
 			}
 			if(!compress) sb.append(tab1);
 			if(!isArray) {
-				if(json) sb.append('"');
+				if(json) sb.append(CHAR_DOUBLE_QUOTES);
 				sb.append(node.getName());
-				if(json) sb.append('"');
-				sb.append(':');
+				if(json) sb.append(CHAR_DOUBLE_QUOTES);
+				sb.append(CHAR_NV_DELIMITER);
 				if(!compress) {
-					sb.append(' ');
+					sb.append(CHAR_SPACE);
 				}
 			}
 			sb.append(node instanceof SSDCollection ?
@@ -789,10 +867,10 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 				(node.toString(compress)));
 		}
 		if(!compress) {
-			sb.append('\n');
+			sb.append(CHAR_NEWLINE);
 			sb.append(tab0);
 		}
-		sb.append(isArray ? ']' : '}');
+		sb.append(isArray ? CHAR_ARRAY_CB : CHAR_OBJECT_CB);
 		return sb.toString();
 	}
 	

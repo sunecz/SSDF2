@@ -1,5 +1,7 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.WORD_NULL;
+
 public final class SSDValue {
 	
 	private final Object value;
@@ -31,6 +33,6 @@ public final class SSDValue {
 	
 	@Override
 	public String toString() {
-		return value == null ? "null" : value.toString();
+		return value == null ? WORD_NULL : value.toString();
 	}
 }
