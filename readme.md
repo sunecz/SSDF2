@@ -48,7 +48,7 @@ SSDCollection data = SSDF.read(new File("res:" + pathToResource));
 ```
 
 ## Data
-There are two main types of objects in SSDF Syntax - a collection (`SSDCollection`) and an object (`SSDObject`) - implementing the `SSDNode` interface. Both of these types has its own intended functionality. `SSDCollection` represents an array or an array with names, and `SSDObject` represents all objects, such as `string`, `integer`, etc.
+There are two main types of objects in SSDF Syntax - a collection (`SSDCollection`) and an object (`SSDObject`) - implementing the `SSDNode` interface. Both of these types has its own intended functionality. `SSDCollection` represents an array with indexes or an array with names, and `SSDObject` represents all objects, such as `string`, `integer`, etc.
 
 ### Types of collections
 * Array (array with indexes)
@@ -84,7 +84,7 @@ SSDNode value = data.get(name);
 For arrays with indexes use the same methods but with an index instead of a name.
 
 ## Data manipulation
-Some basic operations can be done with the data, such as checking if a value exist, setting, adding, and removing. With these operations it's possible to create basic data structures.
+Some basic operations can be done with the data, such as checking if a value exist, setting, adding, and removing. With these operations it's possible to create and manage basic data structures.
 ```java
 // To check if a value exist
 data.has(name);
@@ -99,7 +99,10 @@ data.remove(name);
 For arrays with indexes use the same methods but with an index instead of a name. In case of the add method there is no need to type an index, therefore `data.add(value)` is the right way to go.
 
 ## Name of a node
-When doing any operation with a collection or an object, there are two ways of dealing with the names. For example, if it is needed to get a string value of an object with name `message`, contained in a collection `startup`, contained in a collection `messages`, contained in the main object.
+When doing any operation with a collection or an object, there are two ways of dealing with the names. The first way is calling the correct function to obtain another object or collection, and continuing this way until the final object is returned. The second way is calling the needed function once with a name chain (that is a string containing names of collections and the final object, each seperated by dots).
+
+### Example
+It is needed to get a string value of an object with name `message`, contained in a collection `startup`, contained in a collection `messages`, contained in the main object.
 
 Visualization:
 ```
