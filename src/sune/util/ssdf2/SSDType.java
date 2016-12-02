@@ -8,6 +8,8 @@ import static sune.util.ssdf2.SSDF.WORD_TRUE;
 
 import java.util.regex.Pattern;
 
+import sune.util.ssdf2.func.FuncUtils;
+
 public enum SSDType {
 	
 	NULL("^("+WORD_NULL+")$") {
@@ -113,13 +115,37 @@ public enum SSDType {
 		this.regex = regex;
 	}
 	
+	// Type recognition using RegExp
 	public static final SSDType recognize(String value) {
 		for(SSDType type : values()) {
-			if(type == SSDType.UNKNOWN) continue;
+			if(type == UNKNOWN) continue;
 			if(Pattern.matches(type.regex, value))
 				return type;
 		}
-		return SSDType.UNKNOWN;
+		return UNKNOWN;
+	}
+	
+	// Type recognition using classes
+	public static final SSDType recognize(Object value) {
+		if((value != null)) {
+			Class<?> clazz = FuncUtils.toPrimitive(value.getClass());
+			if((clazz == boolean.class))
+				return BOOLEAN;
+	        if((clazz == byte.class
+	        		|| clazz == char.class
+	        		|| clazz == short.class
+	        		|| clazz == int.class
+	        		|| clazz == long.class))
+	        	return INTEGER;
+	        if((clazz == float.class
+	        		|| clazz == double.class))
+	        	return DECIMAL;
+	        if((clazz == String.class))
+	        	return STRING;
+	        // Other classes are stated as unknown
+	        return UNKNOWN;
+		}
+		return NULL;
 	}
 	
 	SSDObject createObject(SSDNode parent, String name, String value) {

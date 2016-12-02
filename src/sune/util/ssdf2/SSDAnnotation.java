@@ -2,9 +2,11 @@ package sune.util.ssdf2;
 
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_CB;
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_ITEM_DELIMITER;
+import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_NV_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_OB;
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_SIGN;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
+import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 
 import java.util.Collection;
 import java.util.Map;
@@ -36,10 +38,15 @@ public class SSDAnnotation extends SSDCollection {
 					if(!compress)
 						buffer.append(CHAR_SPACE);
 				}
-				buffer.append(node.getName());
-				if(!compress) buffer.append(CHAR_SPACE);
-				buffer.append(SSDF.CHAR_ANNOTATION_NV_DELIMITER);
-				if(!compress) buffer.append(CHAR_SPACE);
+				String nodeName;
+				if(!(nodeName = node.getName())
+							.equals(WORD_ANNOTATION_DEFAULT)
+						|| nodes.size() > 1) {
+					buffer.append(nodeName);
+					if(!compress) buffer.append(CHAR_SPACE);
+					buffer.append(CHAR_ANNOTATION_NV_DELIMITER);
+					if(!compress) buffer.append(CHAR_SPACE);
+				}
 				buffer.append(node.toString(compress));
 			}
 			buffer.append(CHAR_ANNOTATION_CB);

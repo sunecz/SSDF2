@@ -192,7 +192,7 @@ String string = node.toString();
 String string = node.toString(true);
 ```
 
-Compressed version is just a string without unnecessary spaces and whitespaced characters.
+Compressed version is just a string without unnecessary spaces and whitespace characters.
 
 # Features
 There are not many features available at the moment. However, this library is still in development and is constantly growing.
