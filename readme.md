@@ -148,18 +148,18 @@ else if(isObject) {
 }
 ```
 
-## Getting the length of an array with indexes
+## Getting length of an array with indexes
 ```java
 int length = array.length();
 ```
 
-## Getting the parent of a collection or an object
+## Getting parent of a collection or an object
 If the gotten parent is `null` the node is located in the main object.
 ```java
 SSDNode parent = node.getParent();
 ```
 
-## Getting the name of a collection or an object
+## Getting name of a collection or an object
 ```java
 // To get the name of a collection or an object in its parent
 String name = node.getName();
@@ -168,7 +168,7 @@ String name = node.getFullName();
 ```
 
 ## Copying a collection
-When copying a collection a new collection is created with the same name, same objects and same other information.
+When copying a collection a new collection is created with the same name and same objects.
 ```java
 SSDCollection copy = collection.copy();
 // ... some operations
@@ -193,6 +193,23 @@ String string = node.toString(true);
 ```
 
 Compressed version is just a string without unnecessary spaces and whitespace characters.
+
+## Creating a SSDObject
+To create a new SSDObject it possible to do as follows:
+```java
+// With a given name
+SSDObject.of("name", "value");
+// With a randomly generated name
+SSDObject.of("value");
+```
+
+The created object can be then added to a collection:
+```java
+// With a new name
+collection.add("newname", object);
+// With the earlier set name
+collection.add(object);
+```
 
 # Features
 There are not many features available at the moment. However, this library is still in development and is constantly growing.
@@ -220,7 +237,7 @@ Annotation is, same as in Java, some kind of additional information to the objec
 }
 ```
 
-### Getting the annotations of a collection or an object
+### Getting annotations of a collection or an object
 ```java
 // To get all annotations
 SSDAnnotation[] annotations = node.getAnnotations();
@@ -228,6 +245,181 @@ SSDAnnotation[] annotations = node.getAnnotations();
 SSDAnnotation[] annotations = node.getAnnotations(name);
 // To get the first annotation with a name
 SSDAnnotation annotation = node.getAnnotation(name);
+```
+
+### Annotations with only one value
+It is possible to specify an annotation like this:
+```
+@Annotation("a value")
+```
+which is identical with this syntax:
+```
+@Annotation(value="a value")
+```
+
+## Functions
+Functions allows executing a code in Java and returning an output that is put into an invoked SSD File. To invoke a SSD File and get the content, it is needed to call function `SSDCollection.toString(compress, true)`, where `true` states for invocation; additional compression can be used.
+
+### Syntax
+```java
+{
+    value: functionName(arg1, arg2, ..., argN)
+}
+```
+
+### Available functions
+- `get(instance, name)` - Gets a non-static value defined by its name from the given instance
+- `getstatic(class, name)` - Gets a static value defined by its name from the given class
+- `instance(class)` - Creates a new instance of the given class
+- `calc(expression)` - Calculates the given mathematical expression
+
+### Examples
+
+#### Example 1
+Having a class `test.FunctionTest` with content:
+```java
+package test;
+
+import java.io.File;
+
+import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDF;
+
+public class FunctionTest {
+
+    int value = 4;
+
+    public static void main(String[] args) {
+        SSDCollection coll = SSDF.read(new File("res:/test.ssdf"));
+        System.out.println(coll.toString());
+    }
+}
+```
+
+and `test.ssdf` with content:
+```java
+{
+    value: get(instance(test.FunctionTest), "value")
+}
+```
+
+The output will be as supposed:
+```
+{
+    value: 4
+}
+```
+
+For static fields it is needed to use `getstatic(test.FunctionTest, "value")`.
+
+#### Example 2
+To get a stringified instance of a Java class, it is possible to do as follows - content of `test.ssdf` file:
+```
+{
+    value: instance(test.FunctionTest)
+}
+```
+
+and content of `test.FunctionTest` class:
+```java
+package test;
+
+import java.io.File;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDF;
+
+public class FunctionTest {
+    
+    String[] greetings = { "Hello", "Hi", "Hey", "Yo" };
+    float[] factors = { 0.7f, 0.3f, 0.8f };
+    
+    double[][] reals = { { 0.33, 1.4893 }, { 7.83, 8.11 } };
+    Map<String, String> people = new LinkedHashMap<>();
+    
+    public FunctionTest() {
+        people.put("Bob", "Weird man");
+        people.put("Katya", "Beautiful woman");
+        people.put("Marci", "Brave woman");
+        people.put("Julius", "Shy man");
+    }
+    
+    public static void main(String[] args) {
+        SSDCollection coll = SSDF.read(new File("res:/test.ssdf"));
+        System.out.println(coll.toString(false, true));
+    }
+}
+```
+
+Output:
+```
+{
+    value: @Instance(class = "test.FunctionTest")
+    {
+        greetings: [
+            "Hello",
+            "Hi",
+            "Hey",
+            "Yo"
+        ]
+        factors: [
+            0.7,
+            0.3,
+            0.8
+        ],
+        reals: [
+            [
+                0.33,
+                1.4893
+            ],
+            [
+                7.83,
+                8.11
+            ]
+        ],
+        people: {
+            Bob: "Weird man",
+            Katya: "Beautiful woman",
+            Marci: "Brave woman",
+            Julius: "Shy man"
+        }
+    }
+}
+```
+
+#### Example 3
+To calculate a mathematical expression - content of `test.ssdf`:
+```
+{
+    value: calc(3*5+8)
+}
+```
+
+and content of `test.FunctionTest` class:
+```java
+package test;
+
+import java.io.File;
+
+import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDF;
+
+public class FunctionTest {
+    
+    public static void main(String[] args) {
+        SSDCollection coll = SSDF.read(new File("res:/test.ssdf"));
+        System.out.println(coll.toString(false, true));
+    }
+}
+```
+
+Output:
+```
+{
+    value: 23.0
+}
 ```
 
 ## JSON
