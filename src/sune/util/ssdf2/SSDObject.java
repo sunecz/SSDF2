@@ -5,6 +5,7 @@ import static sune.util.ssdf2.SSDF.WORD_NULL;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class SSDObject implements SSDNode {
 	
@@ -61,9 +62,39 @@ public class SSDObject implements SSDNode {
 		}
 	}
 	
+	static final Random RANDOM;
+	static final String RANDOM_CHARS;
+	static {
+		RANDOM		 = new Random();
+		RANDOM_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_";
+	}
+	
+	static final String genRandomName(int length) {
+		StringBuilder sb = new StringBuilder();
+		for(int i = length, l = RANDOM_CHARS.length(); --i >= 0;)
+			sb.append(RANDOM_CHARS.charAt(RANDOM.nextInt(l)));
+		return sb.toString();
+	}
+	
+	public static SSDObject of(Object value) {
+		return of(genRandomName(16), value);
+	}
+	
+	public static SSDObject of(String name, Object value) {
+		return new SSDObject(null, name, value != null
+											? value.toString()
+											: WORD_NULL);
+	}
+	
 	void addAnnotations(List<SSDAnnotation> annotations) {
 		if(annotations != null) {
 			this.annotations.addAll(annotations);
+		}
+	}
+	
+	void addAnnotation(SSDAnnotation annotation) {
+		if(annotation != null) {
+			this.annotations.add(annotation);
 		}
 	}
 	

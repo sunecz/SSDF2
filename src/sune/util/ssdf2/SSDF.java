@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +38,16 @@ public final class SSDF {
 	static final char CHAR_ANNOTATION_CB   			 = ')';
 	static final char CHAR_ANNOTATION_NV_DELIMITER 	 = '=';
 	static final char CHAR_ANNOTATION_ITEM_DELIMITER = ',';
+	// Function call syntax
+	static final char CHAR_FUNCCALL_OB 			   = '(';
+	static final char CHAR_FUNCCALL_CB 			   = ')';
+	static final char CHAR_FUNCCALL_ARGS_DELIMITER = ',';
 	// Syntax special words
 	static final String WORD_NULL  = "null";
 	static final String WORD_TRUE  = "true";
 	static final String WORD_FALSE = "false";
+	// Other special words
+	static final String WORD_ANNOTATION_DEFAULT = "value";
 	
 	// Forbid anyone to create an instance of this class
 	private SSDF() {
@@ -63,7 +70,9 @@ public final class SSDF {
 		// Current escape strength
 		int	escape		= 0;
 		// Whether the annotation sign was encountered
-		boolean bann 	= false;
+		boolean sann 	= false;
+		// Whether the annotation bracket was encountered
+		boolean bann	= false;
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0, l = chars.length, c; i < l; ++i) {
 			cadd = true;
@@ -76,12 +85,13 @@ public final class SSDF {
 			if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
 			// Formatting logic
 			if(!indq && !insq) {
-				if(c == CHAR_ANNOTATION_SIGN) 	    bann = true;
-				if(c == CHAR_ANNOTATION_CB && bann) bann = false;
+				if(c == CHAR_ANNOTATION_SIGN) 	    		sann = true;
+				if(c == CHAR_ANNOTATION_OB && sann) 		bann = true;
+				if(c == CHAR_ANNOTATION_CB && sann && bann) sann = bann = false;
 				boolean ws = Character.isWhitespace(c);
 				if(ws) {
-					if((bann)) {
-						bann = false;
+					if((sann && !bann)) {
+						sann = false;
 						if((c != CHAR_SPACE))
 							c  = CHAR_SPACE;
 					} else cadd = false;
@@ -114,6 +124,7 @@ public final class SSDF {
 		// Temporary objects for names and values
 		StringBuilder temp = new StringBuilder();
 		String tempName    = null;
+		String lastName	   = null;
 		// Counter for array objects
 		int counter 	   = 0;
 		// Determining if a character can be added
@@ -128,6 +139,10 @@ public final class SSDF {
 		boolean bann 	   = false;
 		// Annotations for current object/collection
 		Map<Integer, List<SSDAnnotation>> anns = new LinkedHashMap<>();
+		// Whether the value should be defined now
+		boolean isval 	   = array;
+		// Function call for current object, if null no function call is presented
+		SSDFunctionCall fc = null;
 		// Read the characters and construct the map
 		for(int i = off, l = off + len, c; i < l; ++i) {
 			cadd = true;
@@ -143,10 +158,15 @@ public final class SSDF {
 				// Not in quotes
 				if(!indq && !insq) {
 					cadd = false;
-					if((c == CHAR_OBJECT_OB || c == CHAR_ARRAY_OB || c == CHAR_ANNOTATION_OB) ||
-					   (bann && c == CHAR_SPACE)) {
+					if((c == CHAR_OBJECT_OB || c == CHAR_ARRAY_OB) ||
+					   // Annotations
+					   ((!isval && c == CHAR_ANNOTATION_OB) ||
+						(bann   && c == CHAR_SPACE)) 		||
+					   // Function call
+					   (isval && (c == CHAR_FUNCCALL_OB))) {
 						boolean isarr = c == CHAR_ARRAY_OB;
-						boolean isann = c == CHAR_ANNOTATION_OB;
+						boolean isann = c == CHAR_ANNOTATION_OB && !isval;
+						boolean isfcl = c == CHAR_FUNCCALL_OB   &&  isval;
 						boolean dq 	  = false;
 						boolean sq	  = false;
 						int f 		  = 0;
@@ -172,6 +192,11 @@ public final class SSDF {
 									if(h == CHAR_ANNOTATION_CB && --b == 0) {
 										f = k - i - 1; break;
 									}
+								} else if(isfcl) {
+									if(h == CHAR_FUNCCALL_OB) ++b; else
+									if(h == CHAR_FUNCCALL_CB && --b == 0) {
+										f = k - i - 1; break;
+									}
 								} else {
 									if(h == CHAR_OBJECT_OB) ++b; else
 									if(h == CHAR_OBJECT_CB && --b == 0) {
@@ -195,11 +220,32 @@ public final class SSDF {
 							mann.add(new SSDAnnotation(tempName,
 								// Get all the data from the annotation content
 								readObjects(chars, i+1, f, null, false, true)));
-							bann = false;
+							bann 	 = false;
+							tempName = null;
+						}
+						// Function call
+						else if(isfcl) {
+							// Get function name
+							String funcName = temp.toString();
+							// Get function parameters
+							Map<String, SSDNode> funcMap  = readObjects(chars, i+1, f, null, true, false);
+							Collection<SSDNode>  funcColl = funcMap.values();
+							SSDNode[] 			 funcArgs = funcColl.toArray(new SSDNode[funcColl.size()]);
+							// Create a function call
+							if((tempName == null && array))
+								tempName = Integer.toString(counter++);
+							fc = new SSDFunctionCall(parent, tempName, funcName, funcArgs);
 						}
 						// Arrays or objects
 						else {
-							if(array) tempName = Integer.toString(counter++);
+							if((array)) {
+								if((tempName == null))
+									tempName = Integer.toString(counter++);
+							} else {
+								if((tempName == null
+										&& lastName != null))
+									tempName = lastName;
+							}
 							SSDCollection arr  = new SSDCollection(parent, tempName, isarr);
 							arr.addObjects(readObjects(chars, i+1, f, arr, isarr, false));
 							// Add all the gotten annotations
@@ -209,24 +255,31 @@ public final class SSDF {
 								anns.remove(annc--);
 							}
 							map.put(tempName, arr);
+							tempName = null;
 						}
-						tempName = null;
-						i 		+= f;
+						// Increase the index
+						i += f;
 					} else if(c == CHAR_NV_DELIMITER 	||
 							  c == CHAR_ANNOTATION_SIGN ||
 							 (annotation &&
 								c == CHAR_ANNOTATION_NV_DELIMITER)) {
 						bann 	 = c == CHAR_ANNOTATION_SIGN;
+						isval	 = c != CHAR_ANNOTATION_SIGN || array;
 						tempName = temp.toString();
+						if(!annotation
+								&& !tempName.isEmpty())
+							lastName = tempName;
 						temp.setLength(0);
 					} else if(c == CHAR_ITEM_DELIMITER ||
 							 (annotation &&
 								c == CHAR_ANNOTATION_ITEM_DELIMITER)) {
 						String value;
 						if(!(value = temp.toString()).isEmpty()) {
-							if(array) tempName = Integer.toString(counter++);
+							if((tempName == null && array))
+								tempName = Integer.toString(counter++);
 							if(tempName != null) {
-								SSDObject obj = new SSDObject(parent, tempName, value);
+								SSDObject obj = fc != null ?
+									fc : new SSDObject(parent, tempName, value);
 								// Add all the gotten annotations
 								List<SSDAnnotation> mann = anns.get(annc);
 								if(mann != null) {
@@ -236,8 +289,11 @@ public final class SSDF {
 								map.put(tempName, obj);
 								temp.setLength(0);
 								tempName = null;
+								fc		 = null;
 							}
 						}
+						isval = array;
+						++annc;
 					} else if(c == CHAR_OBJECT_CB ||
 							  c == CHAR_ARRAY_CB  ||
 							  c == CHAR_ANNOTATION_CB) {
@@ -251,9 +307,16 @@ public final class SSDF {
 			if(i == l-1 && !insq && !indq) {
 				String value;
 				if(!(value = temp.toString()).isEmpty()) {
-					if(array) tempName = Integer.toString(counter++);
-					if(tempName != null) {
-						SSDObject obj = new SSDObject(parent, tempName, value);
+					if((array)) {
+						if((tempName == null))
+							tempName = Integer.toString(counter++);
+					} else if((annotation)) {
+						if((tempName == null))
+							tempName = WORD_ANNOTATION_DEFAULT;
+					}
+					if((tempName != null)) {
+						SSDObject obj = fc != null ?
+							fc : new SSDObject(parent, tempName, value);
 						// Add all the gotten annotations
 						List<SSDAnnotation> mann = anns.get(annc);
 						if(mann != null) {
@@ -263,6 +326,7 @@ public final class SSDF {
 						map.put(tempName, obj);
 						temp.setLength(0);
 						tempName = null;
+						fc		 = null;
 					}
 				}
 			}

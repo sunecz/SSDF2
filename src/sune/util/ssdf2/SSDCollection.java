@@ -107,6 +107,12 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		}
 	}
 	
+	void addAnnotation(SSDAnnotation annotation) {
+		if(annotation != null) {
+			this.annotations.add(annotation);
+		}
+	}
+	
 	// Annotations
 	List<SSDAnnotation> annotations() {
 		return annotations;
@@ -165,6 +171,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return (SSDCollection) get0(name, false, true);
 	}
 	
+	public SSDFunctionCall getFunctionCall(String name) {
+		checkIfObject();
+		return (SSDFunctionCall) get0(name, false, true);
+	}
+	
 	public boolean getBoolean(String name) {
 		return getObject(name).booleanValue();
 	}
@@ -212,6 +223,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return (SSDCollection) get0(Integer.toString(index), false, true);
 	}
 	
+	public SSDFunctionCall getFunctionCall(int index) {
+		checkIfArray();
+		return (SSDFunctionCall) get0(Integer.toString(index), false, true);
+	}
+	
 	public boolean getBoolean(int index) {
 		return getObject(index).booleanValue();
 	}
@@ -244,7 +260,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return getObject(index).stringValue();
 	}
 	
-	private final void remove(String name, boolean checkObject, boolean checkCollection) {
+	private final void remove(String name, boolean checkObject, boolean checkCollection,
+				boolean checkFunctionCall) {
 		checkName(name);
 		// Name is a complex name, that means that the object
 		// is not in this array but somewhere in its arrays
@@ -253,18 +270,23 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			// Get name of the array
 			String aname = name.substring(0, index);
 			String rname = name.substring(index+1);
-			getCollection(aname).remove(rname, checkObject, checkCollection);
+			getCollection(aname).remove(rname, checkObject, checkCollection,
+			                            checkFunctionCall);
 		}
 		// Name is a simple name
 		else {
 			SSDNode node = objects.get(name);
-			if(checkObject && node instanceof SSDCollection) {
+			if(checkObject && !(node instanceof SSDObject)) {
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDObject!");
 			}
-			if(checkCollection && node instanceof SSDObject) {
+			if(checkCollection && !(node instanceof SSDCollection)) {
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDCollection!");
+			}
+			if(checkFunctionCall && !(node instanceof SSDFunctionCall)) {
+				throw new RuntimeException(
+					"Object " + name + " is not a SSDFunctionCall!");
 			}
 			objects.remove(name);
 			if(isArray) {
@@ -282,32 +304,42 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void remove(String name) {
 		checkIfObject();
-		remove(name, false, false);
+		remove(name, false, false, false);
 	}
 	
 	public void removeObject(String name) {
 		checkIfObject();
-		remove(name, true, false);
+		remove(name, true, false, false);
 	}
 	
 	public void removeCollection(String name) {
 		checkIfObject();
-		remove(name, false, true);
+		remove(name, false, true, false);
+	}
+	
+	public void removeFunctionCall(String name) {
+		checkIfObject();
+		remove(name, false, false, true);
 	}
 	
 	public void remove(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), false, false);
+		remove(Integer.toString(index), false, false, false);
 	}
 	
 	public void removeObject(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), true, false);
+		remove(Integer.toString(index), true, false, false);
 	}
 	
 	public void removeCollection(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), false, true);
+		remove(Integer.toString(index), false, true, false);
+	}
+	
+	public void removeFunctionCall(int index) {
+		checkIfArray();
+		remove(Integer.toString(index), false, false, true);
 	}
 	
 	// Only internal method
@@ -315,7 +347,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return objects.containsKey(name);
 	}
 	
-	private final boolean has(String name, boolean checkObject, boolean checkCollection) {
+	private final boolean has(String name, boolean checkObject, boolean checkCollection,
+				boolean checkFunctionCall) {
 		checkName(name);
 		SSDCollection node = this;
 		while(!name.isEmpty()) {
@@ -332,13 +365,17 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			else {
 				if(node.has0(name)) {
 					SSDNode node0 = node.get(name);
-					if(checkObject && node0 instanceof SSDCollection) {
+					if(checkObject && !(node0 instanceof SSDObject)) {
 						throw new RuntimeException(
 							"Object " + name + " is not a SSDObject!");
 					}
-					if(checkCollection && node0 instanceof SSDObject) {
+					if(checkCollection && !(node0 instanceof SSDCollection)) {
 						throw new RuntimeException(
 							"Object " + name + " is not a SSDCollection!");
+					}
+					if(checkFunctionCall && !(node0 instanceof SSDFunctionCall)) {
+						throw new RuntimeException(
+							"Object " + name + " is not a SSDFunctionCall!");
 					}
 					return true;
 				}
@@ -350,17 +387,22 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public boolean has(String name) {
 		checkIfObject();
-		return has(name, false, false);
+		return has(name, false, false, false);
 	}
 	
 	public boolean hasObject(String name) {
 		checkIfObject();
-		return has(name, true, false);
+		return has(name, true, false, false);
 	}
 	
 	public boolean hasCollection(String name) {
 		checkIfObject();
-		return has(name, false, true);
+		return has(name, false, true, false);
+	}
+	
+	public boolean hasFunctionCall(String name) {
+		checkIfObject();
+		return has(name, false, false, true);
 	}
 	
 	public boolean hasNull(String name) {
@@ -395,17 +437,22 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public boolean has(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), false, false);
+		return has(Integer.toString(index), false, false, false);
 	}
 	
 	public boolean hasObject(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), true, false);
+		return has(Integer.toString(index), true, false, false);
 	}
 	
 	public boolean hasCollection(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), false, true);
+		return has(Integer.toString(index), false, true, false);
+	}
+	
+	public boolean hasFunctionCall(int index) {
+		checkIfArray();
+		return has(Integer.toString(index), false, true, false);
 	}
 	
 	public boolean hasNull(int index) {
@@ -556,6 +603,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		set(name, SSDType.UNKNOWN, collection, false);
 	}
 	
+	public void set(String name, SSDFunctionCall funcCall) {
+		checkIfObject();
+		set(name, SSDType.UNKNOWN, funcCall, false);
+	}
+	
 	public void setNull(int index) {
 		checkIfArray();
 		set(Integer.toString(index), SSDType.NULL, WORD_NULL, false);
@@ -609,6 +661,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	public void set(int index, SSDCollection collection) {
 		checkIfArray();
 		set(Integer.toString(index), SSDType.UNKNOWN, collection, false);
+	}
+	
+	public void set(int index, SSDFunctionCall funcCall) {
+		checkIfArray();
+		set(Integer.toString(index), SSDType.UNKNOWN, funcCall, false);
 	}
 	
 	public void addNull(String name) {
@@ -666,6 +723,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		set(name, SSDType.UNKNOWN, collection, true);
 	}
 	
+	public void add(String name, SSDFunctionCall funcCall) {
+		checkIfObject();
+		set(name, SSDType.UNKNOWN, funcCall, true);
+	}
+	
 	public void addNull() {
 		checkIfArray();
 		set(Integer.toString(nextIndex()), SSDType.NULL, WORD_NULL, true);
@@ -712,13 +774,27 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public void add(SSDObject object) {
-		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.UNKNOWN, object, true);
+		set(isArray ? Integer.toString(nextIndex())
+		            : object != null
+		            	? object.getName()
+		            	: Integer.toString(nextIndex()),
+		    SSDType.UNKNOWN, object, true);
 	}
 	
 	public void add(SSDCollection collection) {
-		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.UNKNOWN, collection, true);
+		set(isArray ? Integer.toString(nextIndex())
+		            : collection != null
+		            	? collection.getName()
+		            	: Integer.toString(nextIndex()),
+		    SSDType.UNKNOWN, collection, true);
+	}
+	
+	public void add(SSDFunctionCall funcCall) {
+		set(isArray ? Integer.toString(nextIndex())
+		            : funcCall != null
+		            	? funcCall.getName()
+		            	: Integer.toString(nextIndex()),
+		    SSDType.UNKNOWN, funcCall, true);
 	}
 	
 	public int length() {
@@ -762,6 +838,24 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		SSDNode p = parent.get();
 		return (p == null ? "" : (p.getFullName() + CHAR_NAME_DELIMITER)) +
 			   (getName());
+	}
+	
+	public void addAnnotation(String name, SSDCollection data) {
+		annotations.add(new SSDAnnotation(name, data.objects));
+	}
+	
+	public boolean hasAnnotation(String name) {
+		return getAnnotation(name) != null;
+	}
+	
+	public void removeAnnotation(String name) {
+		for(Iterator<SSDAnnotation> i = annotations.iterator();
+				i.hasNext();) {
+			SSDAnnotation ann = i.next();
+			if(ann.getName()	.equals(name) ||
+			   ann.getFullName().equals(name))
+				i.remove();
+		}
 	}
 	
 	@Override
@@ -811,7 +905,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return sb.toString();
 	}
 	
-	String toString(int depth, boolean compress, boolean json) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke) {
 		String tab0 	 = tabString(depth-1);
 		String tab1 	 = tab0 + CHAR_TAB;
 		StringBuilder sb = new StringBuilder();
@@ -826,11 +920,17 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			if(!compress) sb.append(CHAR_NEWLINE);
 		}
 		sb.append(isArray ? CHAR_ARRAY_OB : CHAR_OBJECT_OB);
-		if(!compress && !objects.isEmpty())
-			sb.append(CHAR_NEWLINE);
 		boolean first = true;
 		for(SSDNode node : objects.values()) {
+			if((node instanceof SSDObject)
+					&& ((SSDObject) node).getType() == SSDType.UNKNOWN
+					&& json
+					&& !invoke)
+				continue;
 			if((first)) {
+				if(!compress) {
+					sb.append(CHAR_NEWLINE);
+				}
 				first = false;
 			} else {
 				sb.append(CHAR_ITEM_DELIMITER);
@@ -862,9 +962,27 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					sb.append(CHAR_SPACE);
 				}
 			}
-			sb.append(node instanceof SSDCollection ?
-				((SSDCollection) node).toString(depth+1, compress, json) :
-				(node.toString(compress)));
+			if(node instanceof SSDObject) {
+				if(invoke && node instanceof SSDFunctionCall) {
+					SSDFunctionCall func  = (SSDFunctionCall) node;
+					SSDValue 		value = compress ? func.getValue()
+					         		                 : func.getFormattedValue(depth);
+					String			sval  = value != null ? value.toString()
+					      			                      : WORD_NULL;
+					if(compress) {
+						// There is no compress option, use SSDF compress function
+						sval = new String(SSDF.formatContent(sval.toCharArray()));
+					}
+					// Add the compressed function value
+					sb.append(sval);
+				} else sb.append(node.toString(compress));
+			} else {
+				sb.append(((SSDCollection) node)
+				          		.toString(depth+1,
+				          		          compress,
+				          		          json,
+				          		          invoke));
+			}
 		}
 		if(!compress) {
 			sb.append(CHAR_NEWLINE);
@@ -880,7 +998,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public String toString(boolean compress) {
-		return toString(1, compress, false);
+		return toString(1, compress, false, false);
+	}
+	
+	public String toString(boolean compress, boolean invoke) {
+		return toString(1, compress, false, invoke);
 	}
 	
 	public String toJSON() {
@@ -888,7 +1010,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public String toJSON(boolean compress) {
-		return toString(1, compress, true);
+		return toString(1, compress, true, false);
+	}
+	
+	public String toJSON(boolean compress, boolean invoke) {
+		return toString(1, compress, true, invoke);
 	}
 
 	@Override
