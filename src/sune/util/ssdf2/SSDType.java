@@ -1,6 +1,7 @@
 package sune.util.ssdf2;
 
 import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
+import static sune.util.ssdf2.SSDF.CHAR_ESCAPE;
 import static sune.util.ssdf2.SSDF.CHAR_SINGLE_QUOTES;
 import static sune.util.ssdf2.SSDF.WORD_FALSE;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
@@ -60,7 +61,8 @@ public enum SSDType {
 			return sb.toString();
 		}
 	},
-	STRING("^[\"|'](.*?)[\"|']$") {
+	STRING("^["+CHAR_DOUBLE_QUOTES+"|"+CHAR_SINGLE_QUOTES+"](.*?)" +
+			"["+CHAR_DOUBLE_QUOTES+"|"+CHAR_SINGLE_QUOTES+"]$") {
 		
 		@Override
 		public SSDValue format(String value) {
@@ -74,8 +76,8 @@ public enum SSDType {
 			boolean escaped  = false;
 			for(int i = 0, l = chars.length, c; i < l; ++i) {
 				c = chars[i];
-				if(!escaped && c == '\\') escaped = true;
-				else 					  escaped = false;
+				if(!escaped && c == CHAR_ESCAPE) escaped = true;
+				else 					  		 escaped = false;
 				if(!escaped) sb.append((char) c);
 			}
 			return super.format(sb.toString());
@@ -101,7 +103,7 @@ public enum SSDType {
 			for(int i = 0, l = chars.length, c; i < l; ++i) {
 				c = chars[i];
 				if(c == CHAR_DOUBLE_QUOTES && i != 0 && i != l-1) {
-					sb.append('\\');
+					sb.append(CHAR_ESCAPE);
 					sb.append(CHAR_DOUBLE_QUOTES);
 				} else sb.append((char) c);
 			}

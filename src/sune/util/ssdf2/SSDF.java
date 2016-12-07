@@ -5,6 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -169,14 +171,19 @@ public final class SSDF {
 						boolean isfcl = c == CHAR_FUNCCALL_OB   &&  isval;
 						boolean dq 	  = false;
 						boolean sq	  = false;
+						boolean es	  = false;
 						int f 		  = 0;
 						int b		  = 1;
+						int e		  = 0;
 						// Get content length of the object/array
 						// NOTE: This should be avoided if the desired functionality
 						// is to work in online mode, that means in mode where there
 						// is no looking forward or backward.
 						for(int k = i+1, h; k < l; ++k) {
 							h = chars[k];
+							// Escape logic
+							if(es && --e == 0) 	 		es = false;
+							if(h == CHAR_ESCAPE && !es) es = (e = 2) > 0; else
 							// Quotes logic
 							if(h == CHAR_DOUBLE_QUOTES && !sq) dq = !dq; else
 							if(h == CHAR_SINGLE_QUOTES && !dq) sq = !sq; else
@@ -225,15 +232,23 @@ public final class SSDF {
 						}
 						// Function call
 						else if(isfcl) {
-							// Get function name
-							String funcName = temp.toString();
-							// Get function parameters
-							Map<String, SSDNode> funcMap  = readObjects(chars, i+1, f, null, true, false);
-							Collection<SSDNode>  funcColl = funcMap.values();
-							SSDNode[] 			 funcArgs = funcColl.toArray(new SSDNode[funcColl.size()]);
-							// Create a function call
+							// Check the object's name first
 							if((tempName == null && array))
 								tempName = Integer.toString(counter++);
+							// Get function name
+							String 	  funcName = temp.toString();
+							SSDNode[] funcArgs;
+							if((func_isContentSimple(funcName, anns.get(annc)))) {
+								funcArgs = new SSDNode[] {
+									new SSDObject(null, tempName, new String(chars, i+1, f))
+								};
+							} else {
+								// Get function parameters
+								Map<String, SSDNode> funcMap  = readObjects(chars, i+1, f, null, true, false);
+								Collection<SSDNode>  funcColl = funcMap.values();
+								funcArgs = funcColl.toArray(new SSDNode[funcColl.size()]);
+							}
+							// Create a function call
 							fc = new SSDFunctionCall(parent, tempName, funcName, funcArgs);
 						}
 						// Arrays or objects
@@ -394,6 +409,46 @@ public final class SSDF {
 			}
 		}
 		return nc;
+	}
+	
+	static final String FUNC_CONTENT_SIMPLE = "CONTENT_SIMPLE";
+	static final boolean func_isContentSimple(String funcName, List<SSDAnnotation> anns) {
+		try {
+			String namespace;
+			String[] split = funcName.split("\\" + CHAR_NAME_DELIMITER);
+			if((split.length == 1)) {
+				namespace 		 = SSDFunctionCall.FUNCTION_PREFIX;
+				String ann_dname = SSDFunctionCall.ANNOTATION_NAMESPACE;
+				if((anns != null)) {
+					for(SSDAnnotation ann : anns) {
+						String name = ann.getName();
+						if((name.equalsIgnoreCase(ann_dname))) {
+							namespace = ann.getString("value");
+							break;
+						}
+					}
+				}
+				if(!namespace.endsWith(Character.toString(CHAR_NAME_DELIMITER)))
+					namespace += CHAR_NAME_DELIMITER;
+			} else {
+				namespace = ""; // Namespace defined in funcName
+			}
+			String className = namespace + funcName;
+			Class<?> clazz = Class.forName(className);
+			if((SSDFunctionCall.FUNCTION_IMPL_CLASS.isAssignableFrom(clazz))) {
+				Field field = clazz.getDeclaredField(FUNC_CONTENT_SIMPLE);
+				if(!field.isAccessible())
+					field.setAccessible(true);
+				if((Modifier.isStatic(field.getModifiers()))) {
+					if((field.getType() == boolean.class ||
+						field.getType() == Boolean.class)) {
+						return (boolean) field.get(null);
+					}
+				}
+			}
+		} catch(Exception ex) {
+		}
+		return false;
 	}
 	
 	public static final SSDCollection empty() {

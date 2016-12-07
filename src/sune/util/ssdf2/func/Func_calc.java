@@ -10,6 +10,8 @@ import sune.util.ssdf2.SSDFunctionImpl;
 
 public class Func_calc implements SSDFunctionImpl {
 	
+	public static final boolean CONTENT_SIMPLE = true;
+	
 	static final Object _value(String expr) {
 		if(expr == null || expr.isEmpty())
 			return null;
