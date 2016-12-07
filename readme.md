@@ -363,7 +363,7 @@ Output:
             "Hi",
             "Hey",
             "Yo"
-        ]
+        ],
         factors: [
             0.7,
             0.3,
@@ -423,7 +423,7 @@ Output:
 ```
 
 ## JSON
-This library can be used also for reading JSON strings from files, streams, and strings.
+This library can be also used for reading JSON strings from files, streams, and strings.
 ```java
 SSDCollection data = SSDF.readJSON(jsonString);
 // ... some operations with the json data
