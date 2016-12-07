@@ -1,5 +1,7 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.WORD_NULL;
+
 import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +24,7 @@ public interface SSDFunctionImpl {
 			if((type  == SSDType.UNKNOWN))
 				// Fix the value as a string
 				string = SSDType.STRING.fixValue(string);
-		} else string = "null";
+		} else string = WORD_NULL;
 		// Just create a new instance of SSDObject
 		return new SSDObject(null, name, string);
 	}
@@ -83,7 +85,7 @@ public interface SSDFunctionImpl {
 		for(Entry<?, ?> entry : map.entrySet()) {
 			Object name  = entry.getKey();
 			Object value = entry.getValue();
-			String sname = name == null ? "null" : name.toString();
+			String sname = name == null ? WORD_NULL : name.toString();
 			if(value != null) {
 				if(value.getClass().isArray()) {
 					coll.add(sname, toArray(toObjectArray(value)));

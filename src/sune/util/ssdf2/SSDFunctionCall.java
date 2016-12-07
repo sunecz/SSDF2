@@ -7,6 +7,7 @@ import static sune.util.ssdf2.SSDF.CHAR_NAME_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_NEWLINE;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.CHAR_TAB;
+import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -29,7 +30,7 @@ public class SSDFunctionCall extends SSDObject {
 		try {
 			Class<?> clazz = Class.forName(name);
 			// Check if the class is implementation of SSDFunction
-			if(FUNCTION_IMPL_CLASS.isAssignableFrom(clazz)) {
+			if((FUNCTION_IMPL_CLASS.isAssignableFrom(clazz))) {
 				// Create a new object of function implementation
 				SSDFunctionImpl impl = (SSDFunctionImpl) clazz.newInstance();
 				// Invoke the function implementation
@@ -41,7 +42,8 @@ public class SSDFunctionCall extends SSDObject {
 	}
 	
 	// Convert a SSDNode to an Object
-	static final Object funcArgConv(String namespace, SSDNode node) {
+	@SuppressWarnings("serial")
+	static final Object funcArgConv(SSDFunctionCall call, String namespace, SSDNode node) {
 		if(node.isObject()) {
 			SSDObject obj = (SSDObject) node;
 			// Special condition for function implementation and unknown type
@@ -52,10 +54,10 @@ public class SSDFunctionCall extends SSDObject {
 						&& namespace != null) {
 					final String fn = namespace;
 					// Create a Namespace annotation
-					@SuppressWarnings("serial")
 					SSDAnnotation nsa = new SSDAnnotation(ANNOTATION_NAMESPACE,
 						new LinkedHashMap<String, SSDNode>() {{
-							put("value", new SSDObject(null, "value", fn));
+							put(WORD_ANNOTATION_DEFAULT,
+							    	new SSDObject(null, WORD_ANNOTATION_DEFAULT, fn));
 						}});
 					// Add the namespace to the function implementation
 					obj.addAnnotation(nsa);
@@ -70,7 +72,13 @@ public class SSDFunctionCall extends SSDObject {
 				case INTEGER: return obj.longValue();
 				case DECIMAL: return obj.doubleValue();
 				case STRING:  return obj.stringValue();
-				case UNKNOWN: return (namespace == null || namespace.isEmpty() ?
+				case UNKNOWN: return ((namespace == null || namespace.isEmpty())
+										|| SSDF.func_isContentSimple(
+										   		call.funcName,
+										   		new ArrayList<SSDAnnotation>() {{
+										   			for(SSDAnnotation a : call.getAnnotations())
+										   				add(a);
+										   		}}) ?
 				                         "" : // Just do not add any prefix
 									 	(namespace + CHAR_NAME_DELIMITER)) +
 									 	(obj.stringValue());
@@ -79,16 +87,16 @@ public class SSDFunctionCall extends SSDObject {
 			SSDCollection coll = (SSDCollection) node;
 			List<Object>  list = new ArrayList<>();
 			for(SSDNode item : coll)
-				list.add(funcArgConv(namespace, item));
+				list.add(funcArgConv(call, namespace, item));
 			return list.toArray(new Object[list.size()]);
 		}
 		return null;
 	}
 	
-	static final Object[] convArgs(String namespace, SSDNode[] nodes) {
+	static final Object[] convArgs(SSDFunctionCall call, String namespace, SSDNode[] nodes) {
 		List<Object> list = new ArrayList<>();
 		for(SSDNode arg : nodes)
-			list.add(funcArgConv(namespace, arg));
+			list.add(funcArgConv(call, namespace, arg));
 		return list.toArray(new Object[list.size()]);
 	}
 	
@@ -97,7 +105,7 @@ public class SSDFunctionCall extends SSDObject {
 		SSDAnnotation nsa;
 		if((nsa = node.getAnnotation(ANNOTATION_NAMESPACE)) == null)
 			return null;
-		SSDObject obj = nsa.getObject("value");
+		SSDObject obj = nsa.getObject(WORD_ANNOTATION_DEFAULT);
 		return obj == null ? null : obj.stringValue();
 	}
 	
@@ -106,11 +114,11 @@ public class SSDFunctionCall extends SSDObject {
 		String name = funcName;
 		String space;
 		if((space = getNamespace(this)) == null) {
-			if((name.split("\\.").length == 1))
+			if((name.split("\\" + CHAR_NAME_DELIMITER).length == 1))
 				name = FUNCTION_PREFIX + name;
-		} else  name = space + name;
+		} else  name = space + CHAR_NAME_DELIMITER + name;
 		// Invoke the internal method
-		return funcInvoke(name, convArgs(getNamespace(this), funcArgs));
+		return funcInvoke(name, convArgs(this, getNamespace(this), funcArgs));
 	}
 	
 	@Override
