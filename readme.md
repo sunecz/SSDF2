@@ -493,7 +493,7 @@ To concatenate strings or variables `+` character can be used.
     value: "House",
     data: {
     	value1: $this.1.value,
-	value2: $main.value
+    	value2: $main.value
     }
 }
 ```
