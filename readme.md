@@ -32,7 +32,7 @@ As it was said, syntax is similiar to JSON Syntax and identical with JS object d
 
 # Usage
 ## Reading a SSDF Syntax
-When reading a SSDF Syntax there are multiple ways to read the data. They can be read from a string, file, or even a stream.
+When reading a SSDF Syntax there are multiple ways to read the data. They can be read from a string, file, stream, or even a resource.
 ```java
 // From a string
 SSDCollection data = SSDF.read(string);
@@ -40,11 +40,8 @@ SSDCollection data = SSDF.read(string);
 SSDCollection data = SSDF.read(file);
 // From a stream
 SSDCollection data = SSDF.read(stream);
-```
-
-There is also a simple way to read from a resource contained in a project or a JAR file.
-```java
-SSDCollection data = SSDF.read(new File("res:" + pathToResource));
+// From a resource
+SSDCollection data = SSDF.readResource(path);
 ```
 
 ## Data
@@ -107,11 +104,11 @@ It is needed to get a string value of an object with name `message`, contained i
 Visualization:
 ```
 {
-	messages: {
-		startup: {
-			message: "Hello there!"
-		}
-	}
+    messages: {
+        startup: {
+            message: "Hello there!"
+        }
+    }
 }
 ```
 
@@ -255,6 +252,39 @@ It is possible to specify an annotation like this:
 which is identical with this syntax:
 ```
 @Annotation(value="a value")
+```
+
+### Creation of an annotation
+```java
+// Annotation with some data
+SSDCollection collection = ...;
+SSDAnnotation annotation = SSDAnnotation.of(name, data);
+// Annotation with no data
+SSDAnnotation annotation = SSDAnnotation.of(name);
+```
+
+### Manipulation with annotations
+```java
+// Check whether an annotation exists
+boolean exists = node.hasAnnotation(name);
+// Add an annotation
+node.addAnnotation(annotation);
+// Remove an annotation
+node.removeAnnotation(annotation);
+// Set an annotation
+node.setAnnotation(name, annotation);
+```
+
+### Easier manipulation with annotations
+Methods - `get`, `set`, `add`, `remove` - can be used to manipulate with annotations. When an annotation at a node is needed to be accessed, instead of collection delimiter (`.`) the annotation delimiter (`:`) is used.
+
+```java
+// Get an annotation at a collection
+SSDAnnotation annotation = (SSDAnnotation) node.get("collection:Annotation");
+// Get an annotation at an object
+SSDAnnotation annotation = (SSDAnnotation) node.get("collection.object:Annotation");
+// Get an annotation's value
+SSDNode value = node.get("collection.object:Annotation.value");
 ```
 
 ## Functions
@@ -421,6 +451,74 @@ Output:
     value: 23.0
 }
 ```
+
+## Variables
+When a value is needed to be written again at some place and everytime when this value is changed, it is needed to be changed at that place as well, variables can be used.
+
+Variables are given as follow:
+```
+$[parent[.parent_count].]variable_name
+```
+
+`parent` - Relative parent where the variable is located (`this` - current object, `main` - the main object)<br>
+`parent_count` - How many parents back from relative parent the variable is located<br>
+`variable_name` - Name of the variable<br>
+
+When a variable is used in an annotation, special `variable_name` can be used to obtain the object's value:
+```
+$this.1.value
+```
+
+`this` means: the current annotation<br>
+`1` means: go back once, so the object which the annotation is bound to is the current object<br>
+`value` means: value of the object<br>
+
+### Concatenation of strings or variables
+To concatenate strings or variables `+` character can be used.
+
+### Examples
+```
+{
+    value1: "House",
+    value2: $value1,
+    value3: $this.value1,
+    value4: $this.0.value1
+}
+```
+
+`value1`, `value2`, `value3`, and `value4` have the same value.
+
+```
+{
+    value: "House",
+    data: {
+    	value1: $this.1.value,
+	value2: $main.value
+    }
+}
+```
+
+`value1` and `value2` have the same value.
+
+```
+{
+    @Meta(type="Bricks", height=38.2, type_name=$this.1.value)
+    name: "House"
+}
+```
+
+`type_name` has the value of object `name`.
+
+```
+{
+    first_name: "John",
+    last_name: "Smith",
+    full_name: $first_name + " " + $last_name,
+    greeting: "Hello " + $full_name + "!"
+}
+```
+
+`greeting` has this value: `Hello John Smith!` 
 
 ## JSON
 This library can be also used for reading JSON strings from files, streams, and strings.
