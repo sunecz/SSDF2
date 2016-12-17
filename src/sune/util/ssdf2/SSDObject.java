@@ -2,11 +2,15 @@ package sune.util.ssdf2;
 
 import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
 import static sune.util.ssdf2.SSDF.CHAR_ESCAPE;
+import static sune.util.ssdf2.SSDF.CHAR_NAME_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_SINGLE_QUOTES;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_CONCAT;
+import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_SIGN;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
+import static sune.util.ssdf2.SSDF.WORD_VARIABLE_MAIN;
+import static sune.util.ssdf2.SSDF.WORD_VARIABLE_THIS;
 import static sune.util.ssdf2.SSDF.WORD_VARIABLE_VALUE;
 
 import java.util.ArrayList;
@@ -125,9 +129,11 @@ public class SSDObject implements SSDNode {
 	
 	@Override
 	public String getFullName() {
-		SSDNode p = parent.get();
-		return (p == null ? "" : (p.getFullName() + CHAR_SPACE)) +
-			   (getName());
+		SSDNode p = getParent();
+		return (p == null || p.getName() == null
+					? ""
+					: p.getFullName() + CHAR_NAME_DELIMITER)
+				+ getName();
 	}
 	
 	public SSDType getType() {
@@ -223,10 +229,10 @@ public class SSDObject implements SSDNode {
 	}
 	
 	String getValueByVarName(String name, boolean compress) {
-		String _root  = "this";
+		String _root  = WORD_VARIABLE_THIS;
 		int    _depth = 0;
 		String _name  = name;
-		String[] split = name.split("\\.");
+		String[] split = name.split("\\" + CHAR_VARIABLE_DELIMITER);
 		int length = split.length;
 		if((length == 3)) {
 			_root  = split[0];
@@ -238,8 +244,8 @@ public class SSDObject implements SSDNode {
 		}
 		SSDNode node = null;
 		switch(_root) {
-			case "this": node = this; 	   break;
-			case "main": node = getRoot(); break;
+			case WORD_VARIABLE_THIS: node = this; 	   break;
+			case WORD_VARIABLE_MAIN: node = getRoot(); break;
 			default:
 				// Just do nothing
 				break;
@@ -252,15 +258,18 @@ public class SSDObject implements SSDNode {
 								.getFormattedValue()
 								.stringValue();
 				}
-				return WORD_NULL;
 			} else {
 				SSDCollection parent = (SSDCollection) np;
 				SSDNode 	  object = parent.get(_name);
 				if((object != null)) {
 					String value = object.toString(compress, true);
 					int s = 0, e = value.length();
-					if((value.startsWith("\"") || value.startsWith("\'"))) ++s;
-					if((value.endsWith  ("\"") || value.endsWith  ("\'"))) --e;
+					if((value.startsWith(Character.toString(CHAR_DOUBLE_QUOTES))
+					 || value.startsWith(Character.toString(CHAR_SINGLE_QUOTES))))
+						++s;
+					if((value.endsWith(Character.toString(CHAR_DOUBLE_QUOTES))
+					 || value.endsWith(Character.toString(CHAR_SINGLE_QUOTES))))
+						--e;
 					return value.substring(s, e);
 				}
 			}
