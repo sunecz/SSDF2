@@ -1,9 +1,16 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
+import static sune.util.ssdf2.SSDF.CHAR_ESCAPE;
+import static sune.util.ssdf2.SSDF.CHAR_SINGLE_QUOTES;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
+import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_CONCAT;
+import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_SIGN;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
+import static sune.util.ssdf2.SSDF.WORD_VARIABLE_VALUE;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -24,7 +31,7 @@ public class SSDObject implements SSDNode {
 	
 	SSDObject(SSDNode parent, String name, String value) {
 		SSDType type  = SSDType.recognize(value);
-		SSDValue val  = new SSDValue(value);
+		SSDValue val  = new SSDValue(compress(value));
 		SSDValue fval = type.format(value);
 		checkArgs(name, type, fval);
 		this.parent = new SSDProperty<>(parent);
@@ -76,6 +83,10 @@ public class SSDObject implements SSDNode {
 		return sb.toString();
 	}
 	
+	static final String compress(String value) {
+		return new String(SSDF.formatContent(value.toCharArray()));
+	}
+	
 	public static SSDObject of(Object value) {
 		return of(genRandomName(16), value);
 	}
@@ -86,15 +97,19 @@ public class SSDObject implements SSDNode {
 											: WORD_NULL);
 	}
 	
-	void addAnnotations(List<SSDAnnotation> annotations) {
-		if(annotations != null) {
-			this.annotations.addAll(annotations);
+	void addAnnotations0(List<SSDAnnotation> anns) {
+		if((anns != null)) {
+			for(SSDAnnotation a : anns) {
+				a.parent.set(this);
+				annotations.add(a);
+			}
 		}
 	}
 	
-	void addAnnotation(SSDAnnotation annotation) {
-		if(annotation != null) {
-			this.annotations.add(annotation);
+	void addAnnotation0(SSDAnnotation ann) {
+		if((ann != null)) {
+			ann.parent.set(this);
+			annotations.add(ann);
 		}
 	}
 	
@@ -138,6 +153,25 @@ public class SSDObject implements SSDNode {
 	public Object value() 		 				 { return fvalue.value(); 		 }
 	public <T> T value(Class<? extends T> clazz) { return fvalue.value(clazz); 	 }
 	
+	public void addAnnotation(SSDAnnotation annotation) {
+		// Call the internal method
+		addAnnotation0(annotation);
+	}
+	
+	public boolean hasAnnotation(String name) {
+		return getAnnotation(name) != null;
+	}
+	
+	public void removeAnnotation(String name) {
+		for(Iterator<SSDAnnotation> i = annotations.iterator();
+				i.hasNext();) {
+			SSDAnnotation ann = i.next();
+			if(ann.getName()	.equals(name) ||
+			   ann.getFullName().equals(name))
+				i.remove();
+		}
+	}
+	
 	@Override
 	public SSDAnnotation getAnnotation(String name) {
 		for(SSDAnnotation ann : annotations)
@@ -170,13 +204,216 @@ public class SSDObject implements SSDNode {
 		return false;
 	}
 	
-	@Override
-	public String toString() {
-		return toString(false);
+	SSDCollection getRoot() {
+		SSDNode p = this, n;
+		do {
+			n = p;
+			p = n.getParent();
+		} while(p != null);
+		return (SSDCollection) n;
 	}
 	
+	SSDNode getNonNullParent(SSDNode p, int d) {
+		SSDNode n;
+		do {
+			n = p;
+			p = n.getParent();
+		} while(p != null && d-- >= 0);
+		return n;
+	}
+	
+	String getValueByVarName(String name, boolean compress) {
+		String _root  = "this";
+		int    _depth = 0;
+		String _name  = name;
+		String[] split = name.split("\\.");
+		int length = split.length;
+		if((length == 3)) {
+			_root  = split[0];
+			_depth = Integer.parseInt(split[1]);
+			_name  = split[2];
+		} else if((length == 2)) {
+			_root  = split[0];
+			_name  = split[1];
+		}
+		SSDNode node = null;
+		switch(_root) {
+			case "this": node = this; 	   break;
+			case "main": node = getRoot(); break;
+			default:
+				// Just do nothing
+				break;
+		}
+		if((node != null)) {
+			SSDNode np = getNonNullParent(node, _depth);
+			if(!(np instanceof SSDCollection)) {
+				if((_name.equalsIgnoreCase(WORD_VARIABLE_VALUE))) {
+					return ((SSDObject) np)
+								.getFormattedValue()
+								.stringValue();
+				}
+				return WORD_NULL;
+			} else {
+				SSDCollection parent = (SSDCollection) np;
+				SSDNode 	  object = parent.get(_name);
+				if((object != null)) {
+					String value = object.toString(compress, true);
+					int s = 0, e = value.length();
+					if((value.startsWith("\"") || value.startsWith("\'"))) ++s;
+					if((value.endsWith  ("\"") || value.endsWith  ("\'"))) --e;
+					return value.substring(s, e);
+				}
+			}
+		}
+		return WORD_NULL;
+	}
+	
+	String toString(int depth, boolean compress, boolean invoke) {
+		if(invoke && this instanceof SSDFunctionCall) {
+			SSDFunctionCall func  = (SSDFunctionCall) this;
+			SSDValue 		value = compress ? func.getValue()
+			         		                 : func.getFormattedValue(depth);
+			String			sval  = value != null ? value.toString()
+			      			                      : WORD_NULL;
+			if(compress) {
+				// There is no compress option, use SSDF compress function
+				sval = new String(compress(sval));
+			}
+			// Add the compressed function value
+			return sval;
+		} else {
+			if((value == null)) return WORD_NULL;
+			String sval = value.toString();
+			if(invoke && getType() == SSDType.STRING_VAR) {
+				StringBuilder sb = new StringBuilder();
+				StringBuilder tm = new StringBuilder();
+				StringBuilder vr = new StringBuilder();
+				// Quotes
+				boolean indq = false;
+				boolean insq = false;
+				// Escaping
+				boolean escaped = false;
+				int 	escape  = 0;
+				// Miscellaneous
+				boolean var = false;
+				boolean add = false;
+				// Replace variables with actual values
+				char[] chars = sval.toCharArray();
+				for(int i = 0, l = chars.length, c; i < l; ++i) {
+					add = true;
+					c   = chars[i];
+					// Escape logic
+					if(escaped && --escape == 0) 	 escaped = false;
+					if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+					// Quotes logic
+					if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) { indq = !indq; add = false; } else
+					if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) { insq = !insq; add = false; } else
+					// Checking logic
+					if(!indq && !insq) {
+						if((var)) {
+							// Check if variable name is present and valid?
+							if((Character.isLetterOrDigit(c))
+									|| c == '_'
+									|| c == '.') {
+								tm.append((char) c);
+								add = false;
+							} else {
+								String name = tm.toString();
+								String vval = getValueByVarName(name, compress);
+								tm.setLength(0);
+								vr.append(vval);
+								var = false;
+							}
+						}
+						if((c == CHAR_VARIABLE_SIGN)) {
+							var = true;
+							add = false;
+						} else if((c == CHAR_VARIABLE_CONCAT)) {
+							sb.append(vr.toString());
+							vr.setLength(0);
+							add = false;
+						}
+					}
+					if(add) sb.append((char) c);
+				}
+				if((tm.length() > 0)) {
+					String name = tm.toString();
+					String vval = getValueByVarName(name, compress);
+					tm.setLength(0);
+					vr.append(vval);
+				}
+				if((vr.length() > 0)) {
+					sb.append(vr.toString());
+					vr.setLength(0);
+				}
+				sb.insert(0, CHAR_DOUBLE_QUOTES);
+				sb.append(CHAR_DOUBLE_QUOTES);
+				return sb.toString();
+			}
+			if(!compress) {
+				StringBuilder sb = new StringBuilder();
+				// Quotes
+				boolean indq = false;
+				boolean insq = false;
+				// Escaping
+				boolean escaped = false;
+				int 	escape  = 0;
+				// Miscellaneous
+				boolean add = false;
+				boolean con = false;
+				boolean spc = false;
+				// Beautify the object's content
+				char[] chars = sval.toCharArray();
+				for(int i = 0, l = chars.length, c; i < l; ++i) {
+					add = true;
+					c   = chars[i];
+					// Escape logic
+					if(escaped && --escape == 0) 	 escaped = false;
+					if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+					// Quotes logic
+					if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
+					if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
+					// Checking logic
+					if(!indq && !insq) {
+						if((c == CHAR_SPACE)) {
+							if((spc))
+								add = false;
+							spc = true;
+						} else if((c == CHAR_VARIABLE_CONCAT)) {
+							if(!spc)
+								sb.append(CHAR_SPACE);
+							con = true;
+							spc = false;
+						}
+					} else {
+						spc = false;
+						con = false;
+					}
+					if(add) sb.append((char) c);
+					if((con && !spc)) {
+						sb.append(CHAR_SPACE);
+						con = false;
+						spc = true;
+					}
+				}
+				sval = sb.toString();
+			}
+			return sval;
+		}
+	}
+	
+	@Override
+	public String toString() {
+		return toString(0, false, false);
+	}
+	
+	@Override
 	public String toString(boolean compress) {
-		// No compression can be done here
-		return value == null ? WORD_NULL : value.toString();
+		return toString(0, compress, false);
+	}
+	
+	@Override
+	public String toString(boolean compress, boolean invoke) {
+		return toString(0, compress, invoke);
 	}
 }

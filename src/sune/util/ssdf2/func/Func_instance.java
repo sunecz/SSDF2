@@ -6,6 +6,7 @@ import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
+import sune.util.ssdf2.SSDAnnotation;
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDFunctionImpl;
 
@@ -25,7 +26,8 @@ public class Func_instance implements SSDFunctionImpl {
 			annd.add("class", path);
 			if((args.length > 0))
 				annd.add("args", SSDFunctionImpl.toArray(args));
-			coll.addAnnotation("Instance", annd);
+			// Add the Instance annotation
+			coll.addAnnotation(SSDAnnotation.of("Instance", annd));
 			return coll;
 		} catch(Exception ex) {
 		}

@@ -9,20 +9,33 @@ import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class SSDAnnotation extends SSDCollection {
+	
+	SSDAnnotation(String name) {
+		this(name, new LinkedHashMap<>());
+	}
 	
 	SSDAnnotation(String name, Map<String, SSDNode> data) {
 		super(null, name, false, data, null);
 	}
 	
-	@Override
-	public String toString() {
-		return toString(false);
+	public static final SSDAnnotation of(String name) {
+		return of(name, SSDCollection.empty());
 	}
 	
-	public String toString(boolean compress) {
+	public static final SSDAnnotation of(String name, SSDCollection data) {
+		return new SSDAnnotation(name, data.objects());
+	}
+	
+	@Override
+	public void addAnnotation(SSDAnnotation annotation) {
+		// Do nothing
+	}
+	
+	String toString(int depth, boolean compress, boolean invoke) {
 		StringBuilder buffer = new StringBuilder();
 		buffer.append(CHAR_ANNOTATION_SIGN);
 		buffer.append(getName());
@@ -47,10 +60,25 @@ public class SSDAnnotation extends SSDCollection {
 					buffer.append(CHAR_ANNOTATION_NV_DELIMITER);
 					if(!compress) buffer.append(CHAR_SPACE);
 				}
-				buffer.append(node.toString(compress));
+				buffer.append(node.toString(compress, invoke));
 			}
 			buffer.append(CHAR_ANNOTATION_CB);
 		} else if(compress) buffer.append(CHAR_SPACE);
 		return buffer.toString();
+	}
+	
+	@Override
+	public String toString() {
+		return toString(0, false, false);
+	}
+	
+	@Override
+	public String toString(boolean compress) {
+		return toString(0, compress, false);
+	}
+	
+	@Override
+	public String toString(boolean compress, boolean invoke) {
+		return toString(0, compress, invoke);
 	}
 }
