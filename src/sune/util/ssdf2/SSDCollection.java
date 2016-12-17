@@ -1,5 +1,6 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_ARRAY_CB;
 import static sune.util.ssdf2.SSDF.CHAR_ARRAY_OB;
 import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
@@ -26,8 +27,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		ARRAY, OBJECT;
 	}
 	
-	private final SSDProperty<SSDNode> parent;
-	private final SSDProperty<String>  name;
+	// Protected properties
+	protected final SSDProperty<SSDNode> parent;
+	protected final SSDProperty<String>  name;
+	
+	// Private properties
 	private final Map<String, SSDNode> objects;
 	private final boolean 			   isArray;
 	
@@ -101,15 +105,19 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return objects;
 	}
 	
-	void addAnnotations(List<SSDAnnotation> annotations) {
-		if(annotations != null) {
-			this.annotations.addAll(annotations);
+	void addAnnotations0(List<SSDAnnotation> anns) {
+		if((anns != null)) {
+			for(SSDAnnotation a : anns) {
+				a.parent.set(this);
+				annotations.add(a);
+			}
 		}
 	}
 	
-	void addAnnotation(SSDAnnotation annotation) {
-		if(annotation != null) {
-			this.annotations.add(annotation);
+	void addAnnotation0(SSDAnnotation ann) {
+		if((ann != null)) {
+			ann.parent.set(this);
+			annotations.add(ann);
 		}
 	}
 	
@@ -130,50 +138,70 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return new SSDCollection(null, "", isArray);
 	}
 	
-	private final SSDNode get0(String name, boolean checkObject, boolean checkCollection) {
+	protected final SSDNode get(String name, boolean checkObject, boolean checkCollection,
+				boolean checkFunctionCall) {
 		checkName(name);
-		// Name is a complex name, that means that the object
-		// is not in this array but somewhere in its arrays
-		int index;
-		if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
-			// Get name of the array
-			String aname = name.substring(0, index);
-			String rname = name.substring(index+1);
-			return getCollection(aname).get(rname);
-		}
-		// Name is a simple name
-		else {
-			SSDNode node = objects.get(name);
-			if(checkObject && node instanceof SSDCollection) {
+		int nindex = name.indexOf(CHAR_NAME_DELIMITER);
+		int aindex = name.indexOf(CHAR_ANNOTATION_DELIMITER);
+		if((nindex > -1)) {
+			if((aindex > -1 && aindex < nindex)) {
+				String nname = name.substring(0, aindex);
+				String aname = name.substring(aindex+1, nindex);
+				String kname = name.substring(nindex+1);
+				return get(nname).getAnnotation(aname)
+								 .get(kname, checkObject,
+								      checkCollection,
+								      checkFunctionCall);
+			} else {
+				String cname = name.substring(0, nindex);
+				String oname = name.substring(nindex+1);
+				return getCollection(cname).get(oname, checkObject,
+				                                checkCollection,
+				                                checkFunctionCall);
+			}
+		} else if((aindex > -1)) {
+			String nname = name.substring(0, aindex);
+			String aname = name.substring(aindex+1);
+			if(checkObject)
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDObject!");
-			}
-			if(checkCollection && node instanceof SSDObject) {
+			return get(nname).getAnnotation(aname);
+		} else {
+			SSDNode node = objects.get(name);
+			if(checkObject
+					&& !(node instanceof SSDObject))
+				throw new RuntimeException(
+					"Object " + name + " is not a SSDObject!");
+			if(checkCollection
+					&& !(node instanceof SSDCollection))
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDCollection!");
-			}
+			if(checkFunctionCall
+					&& !(node instanceof SSDFunctionCall))
+				throw new RuntimeException(
+					"Object " + name + " is not a SSDFunctionCall!");
 			return node;
 		}
 	}
 	
 	public SSDNode get(String name) {
 		checkIfObject();
-		return get0(name, false, false);
+		return get(name, false, false, false);
 	}
 	
 	public SSDObject getObject(String name) {
 		checkIfObject();
-		return (SSDObject) get0(name, true, false);
+		return (SSDObject) get(name, true, false, false);
 	}
 	
 	public SSDCollection getCollection(String name) {
 		checkIfObject();
-		return (SSDCollection) get0(name, false, true);
+		return (SSDCollection) get(name, false, true, false);
 	}
 	
 	public SSDFunctionCall getFunctionCall(String name) {
 		checkIfObject();
-		return (SSDFunctionCall) get0(name, false, true);
+		return (SSDFunctionCall) get(name, false, false, true);
 	}
 	
 	public boolean getBoolean(String name) {
@@ -210,22 +238,22 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public SSDNode get(int index) {
 		checkIfArray();
-		return get0(Integer.toString(index), false, false);
+		return get(Integer.toString(index), false, false, false);
 	}
 	
 	public SSDObject getObject(int index) {
 		checkIfArray();
-		return (SSDObject) get0(Integer.toString(index), true, false);
+		return (SSDObject) get(Integer.toString(index), true, false, false);
 	}
 	
 	public SSDCollection getCollection(int index) {
 		checkIfArray();
-		return (SSDCollection) get0(Integer.toString(index), false, true);
+		return (SSDCollection) get(Integer.toString(index), false, true, false);
 	}
 	
 	public SSDFunctionCall getFunctionCall(int index) {
 		checkIfArray();
-		return (SSDFunctionCall) get0(Integer.toString(index), false, true);
+		return (SSDFunctionCall) get(Integer.toString(index), false, false, true);
 	}
 	
 	public boolean getBoolean(int index) {
@@ -260,34 +288,50 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return getObject(index).stringValue();
 	}
 	
-	private final void remove(String name, boolean checkObject, boolean checkCollection,
+	protected final void remove(String name, boolean checkObject, boolean checkCollection,
 				boolean checkFunctionCall) {
 		checkName(name);
-		// Name is a complex name, that means that the object
-		// is not in this array but somewhere in its arrays
-		int index;
-		if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
-			// Get name of the array
-			String aname = name.substring(0, index);
-			String rname = name.substring(index+1);
-			getCollection(aname).remove(rname, checkObject, checkCollection,
-			                            checkFunctionCall);
-		}
-		// Name is a simple name
-		else {
+		int nindex = name.indexOf(CHAR_NAME_DELIMITER);
+		int aindex = name.indexOf(CHAR_ANNOTATION_DELIMITER);
+		if((nindex > -1)) {
+			if((aindex > -1 && aindex < nindex)) {
+				String nname = name.substring(0, aindex);
+				String aname = name.substring(aindex+1, nindex);
+				String kname = name.substring(nindex+1);
+				get(nname).getAnnotation(aname)
+						  .remove(kname, checkObject,
+						          checkCollection,
+						          checkFunctionCall);
+			} else {
+				String cname = name.substring(0, nindex);
+				String oname = name.substring(nindex+1);
+				getCollection(cname).remove(oname, checkObject,
+				                            checkCollection,
+				                            checkFunctionCall);
+			}
+		} else if((aindex > -1)) {
+			String nname = name.substring(0, aindex);
+			String aname = name.substring(aindex+1);
+			SSDNode node = get(nname);
+			if((node instanceof SSDObject)) {
+				((SSDObject)     node).removeAnnotation(aname);
+			} else if((node instanceof SSDCollection)) {
+				((SSDCollection) node).removeAnnotation(aname);
+			}
+		} else {
 			SSDNode node = objects.get(name);
-			if(checkObject && !(node instanceof SSDObject)) {
+			if(checkObject
+					&& !(node instanceof SSDObject))
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDObject!");
-			}
-			if(checkCollection && !(node instanceof SSDCollection)) {
+			if(checkCollection
+					&& !(node instanceof SSDCollection))
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDCollection!");
-			}
-			if(checkFunctionCall && !(node instanceof SSDFunctionCall)) {
+			if(checkFunctionCall
+					&& !(node instanceof SSDFunctionCall))
 				throw new RuntimeException(
 					"Object " + name + " is not a SSDFunctionCall!");
-			}
 			objects.remove(name);
 			if(isArray) {
 				// Recreate objects to ensure that indexes are correct
@@ -342,45 +386,49 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		remove(Integer.toString(index), false, false, true);
 	}
 	
-	// Only internal method
-	private final boolean has0(String name) {
-		return objects.containsKey(name);
-	}
-	
-	private final boolean has(String name, boolean checkObject, boolean checkCollection,
+	protected final boolean has(String name, boolean checkObject, boolean checkCollection,
 				boolean checkFunctionCall) {
 		checkName(name);
-		SSDCollection node = this;
-		while(!name.isEmpty()) {
-			// Name is a complex name, that means that the object
-			// is not in this array but somewhere in its arrays
-			int index;
-			if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
-				String aname = name.substring(0, index);
-				if(!node.has0(aname)) return false;
-				node = node.getCollection(aname);
-				name = name.substring(index+1);
-			}
-			// Name is a simple name
-			else {
-				if(node.has0(name)) {
-					SSDNode node0 = node.get(name);
-					if(checkObject && !(node0 instanceof SSDObject)) {
-						throw new RuntimeException(
-							"Object " + name + " is not a SSDObject!");
-					}
-					if(checkCollection && !(node0 instanceof SSDCollection)) {
-						throw new RuntimeException(
-							"Object " + name + " is not a SSDCollection!");
-					}
-					if(checkFunctionCall && !(node0 instanceof SSDFunctionCall)) {
-						throw new RuntimeException(
-							"Object " + name + " is not a SSDFunctionCall!");
-					}
-					return true;
+		int nindex = name.indexOf(CHAR_NAME_DELIMITER);
+		int aindex = name.indexOf(CHAR_ANNOTATION_DELIMITER);
+		if((nindex > -1)) {
+			if((aindex > -1 && aindex < nindex)) {
+				String nname = name.substring(0, aindex);
+				String aname = name.substring(aindex+1, nindex);
+				String kname = name.substring(nindex+1);
+				SSDNode node;
+				if((node = get(nname)) != null
+						&& (node = node.getAnnotation(aname)) != null) {
+					return ((SSDAnnotation) node).get(kname, checkObject,
+					                                  checkCollection,
+					                                  checkFunctionCall)
+												!= null;
 				}
-				return false;
+			} else {
+				String cname = name.substring(0, nindex);
+				String oname = name.substring(nindex+1);
+				SSDNode node;
+				if((node = getCollection(cname)) != null) {
+					return ((SSDCollection) node).get(oname, checkObject,
+					                                  checkCollection,
+					                                  checkFunctionCall)
+												!= null;
+				}
 			}
+		} else if((aindex > -1)) {
+			String nname = name.substring(0, aindex);
+			String aname = name.substring(aindex+1);
+			SSDNode node;
+			if((node = get(nname)) != null) {
+				return node.getAnnotation(aname) != null;
+			}
+		} else {
+			SSDNode node = objects.get(name);
+			if((checkObject 	  && !(node instanceof SSDObject))     ||
+			   (checkCollection   && !(node instanceof SSDCollection)) ||
+			   (checkFunctionCall && !(node instanceof SSDFunctionCall)))
+				return false;
+			return node != null;
 		}
 		return false;
 	}
@@ -452,7 +500,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public boolean hasFunctionCall(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), false, true, false);
+		return has(Integer.toString(index), false, false, true);
 	}
 	
 	public boolean hasNull(int index) {
@@ -485,292 +533,323 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			   obj.getType() == SSDType.STRING;
 	}
 	
-	private final void set(String name, SSDType type, Object value, boolean add) {
+	protected final void set(String name, SSDType type, Object value) {
 		checkName(name);
-		SSDCollection node = this;
-		while(!name.isEmpty()) {
-			// Name is a complex name, that means that the object
-			// is not in this array but somewhere in its arrays
-			int index;
-			if((index = name.indexOf(CHAR_NAME_DELIMITER)) > -1) {
-				String 		  aname = name.substring(0, index);
-				SSDCollection coll  = node.getCollection(aname);
-				// If the collection does not exist, create one
-				// with the needed name
-				if((coll == null)) {
-					// Get the next object name
-					String nextName = name.substring(index+1);
-					// Format the name if needed
-					int index0;
-					if((index0 = nextName.indexOf(CHAR_NAME_DELIMITER)) > -1) {
-						// Trim the name so it is only one part
-						// (between two dots)
-						nextName = nextName.substring(0, index0);
+		int nindex = name.indexOf(CHAR_NAME_DELIMITER);
+		int aindex = name.indexOf(CHAR_ANNOTATION_DELIMITER);
+		if((nindex > -1)) {
+			if((aindex > -1 && aindex < nindex)) {
+				String nname = name.substring(0, aindex);
+				String aname = name.substring(aindex+1, nindex);
+				String kname = name.substring(nindex+1);
+				SSDNode node = get(nname);
+				// When object (collection) does not exist, create one
+				if((node == null)) {
+					node = new SSDObject(this, nname, WORD_NULL);
+					objects.put(nname, node);
+				}
+				SSDAnnotation ann = node.getAnnotation(aname);
+				// When annotation does not exist, create one
+				if((ann == null)) {
+					ann = new SSDAnnotation(aname);
+					if((node instanceof SSDObject)) {
+						((SSDObject)     node).addAnnotation(ann);
+					} else if((node instanceof SSDCollection)) {
+						((SSDCollection) node).addAnnotation(ann);
 					}
-					// Decide whether the new collection should be array
-					boolean array = nextName.matches("\\d+");
-					// Create a new collection with all needed data
-					coll = new SSDCollection(node, aname, array);
-					// Add the created collection
-					node.set(aname, coll);
 				}
-				// Set the collection for the next loop
-				node = coll;
-				name = name.substring(index+1);
+				ann.set(kname, type, value);
+			} else {
+				String cname = name.substring(0, nindex);
+				String oname = name.substring(nindex+1);
+				SSDNode node = get(cname);
+				// When collection does not exist, create one
+				if((node == null || !(node instanceof SSDCollection))) {
+					String k = oname;
+					int    i = oname.indexOf(CHAR_NAME_DELIMITER);
+					// Determine if the collection should be array or not
+					if((i) > -1) k = k.substring(0, i);
+					boolean array  = k.matches("\\d+");
+					node = new SSDCollection(this, cname, array);
+					objects.put(cname, node);
+				}
+				((SSDCollection) node).set(oname, type, value);
 			}
-			// Name is a simple name
-			else {
-				// Create a new node of the desired type
-				SSDNode newNode = null;
-				if(value instanceof SSDCollection) {
-					SSDCollection coll = (SSDCollection) value;
-					// Change properties of the collection
-					coll.parent.set(node);
-					coll.name  .set(name);
-					// Change value of the new node
-					newNode = coll;
-				} else if(value instanceof SSDObject) {
-					SSDObject obj = (SSDObject) value;
-					// Change properties of the object
-					obj.parent.set(node);
-					obj.name  .set(name);
-					// Change value of the new node
-					newNode = obj;
-				} else if(value instanceof String) {
-					newNode = type.createObject(node, name, (String) value);
+		} else if((aindex > -1)) {
+			if((value instanceof SSDAnnotation)) {
+				String nname = name.substring(0, aindex);
+				String aname = name.substring(aindex+1);
+				SSDNode node = get(nname);
+				// When object (collection) does not exist, create one
+				if((node == null)) {
+					node = new SSDObject(this, nname, WORD_NULL);
+					objects.put(nname, node);
 				}
-				// Add the created node to the objects
-				if(newNode != null) {
-					node.objects.put(name, newNode);
-					break;
+				if((node instanceof SSDObject)) {
+					SSDObject 	  n = (SSDObject)     node;
+					SSDAnnotation a = (SSDAnnotation) value;
+					// Remove any previous annotation
+					if((n.getAnnotation   (aname) != null))
+						n.removeAnnotation(aname);
+					a.name  .set(aname);
+					a.parent.set(this);
+					n.addAnnotation(a);
+				} else if((node instanceof SSDCollection)) {
+					SSDCollection n = (SSDCollection) node;
+					SSDAnnotation a = (SSDAnnotation) value;
+					// Remove any previous annotation
+					if((n.getAnnotation   (aname) != null))
+						n.removeAnnotation(aname);
+					a.name  .set(aname);
+					a.parent.set(this);
+					n.addAnnotation(a);
 				}
+			} else {
+				throw new RuntimeException(
+					"Value is not a SSDAnnotation!");
 			}
+		} else {
+			SSDNode node = null;
+			if((value instanceof SSDCollection)) {
+				SSDCollection n = (SSDCollection) value;
+				n.name  .set(name);
+				n.parent.set(this);
+				node = n;
+			} else if(value instanceof SSDObject) {
+				SSDObject n = (SSDObject) value;
+				n.name  .set(name);
+				n.parent.set(this);
+				node = n;
+			} else if(value instanceof String) {
+				node = type.createObject(this, name, (String) value);
+			}
+			if((node != null)) objects.put(name, node);
 		}
 	}
 	
 	public void setNull(String name) {
 		checkIfObject();
-		set(name, SSDType.NULL, WORD_NULL, false);
+		set(name, SSDType.NULL, WORD_NULL);
 	}
 	
 	public void set(String name, boolean value) {
 		checkIfObject();
-		set(name, SSDType.BOOLEAN, Boolean.toString(value), false);
+		set(name, SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void set(String name, byte value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Byte.toString(value), false);
+		set(name, SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void set(String name, short value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Short.toString(value), false);
+		set(name, SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void set(String name, int value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Integer.toString(value), false);
+		set(name, SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void set(String name, long value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Long.toString(value), false);
+		set(name, SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void set(String name, float value) {
 		checkIfObject();
-		set(name, SSDType.DECIMAL, Float.toString(value), false);
+		set(name, SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void set(String name, double value) {
 		checkIfObject();
-		set(name, SSDType.DECIMAL, Double.toString(value), false);
+		set(name, SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void set(String name, String value) {
 		checkIfObject();
-		set(name, SSDType.STRING, value, false);
+		set(name, SSDType.STRING, value);
 	}
 	
 	public void set(String name, SSDObject object) {
 		checkIfObject();
-		set(name, SSDType.UNKNOWN, object, false);
+		set(name, SSDType.UNKNOWN, object);
 	}
 	
 	public void set(String name, SSDCollection collection) {
 		checkIfObject();
-		set(name, SSDType.UNKNOWN, collection, false);
+		set(name, SSDType.UNKNOWN, collection);
 	}
 	
 	public void set(String name, SSDFunctionCall funcCall) {
 		checkIfObject();
-		set(name, SSDType.UNKNOWN, funcCall, false);
+		set(name, SSDType.UNKNOWN, funcCall);
 	}
 	
 	public void setNull(int index) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.NULL, WORD_NULL, false);
+		set(Integer.toString(index), SSDType.NULL, WORD_NULL);
 	}
 	
 	public void set(int index, boolean value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.BOOLEAN, Boolean.toString(value), false);
+		set(Integer.toString(index), SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void set(int index, byte value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Byte.toString(value), false);
+		set(Integer.toString(index), SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void set(int index, short value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Short.toString(value), false);
+		set(Integer.toString(index), SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void set(int index, int value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Integer.toString(value), false);
+		set(Integer.toString(index), SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void set(int index, long value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Long.toString(value), false);
+		set(Integer.toString(index), SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void set(int index, float value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.DECIMAL, Float.toString(value), false);
+		set(Integer.toString(index), SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void set(int index, double value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.DECIMAL, Double.toString(value), false);
+		set(Integer.toString(index), SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void set(int index, String value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.STRING, value, false);
+		set(Integer.toString(index), SSDType.STRING, value);
 	}
 	
 	public void set(int index, SSDObject object) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.UNKNOWN, object, false);
+		set(Integer.toString(index), SSDType.UNKNOWN, object);
 	}
 	
 	public void set(int index, SSDCollection collection) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.UNKNOWN, collection, false);
+		set(Integer.toString(index), SSDType.UNKNOWN, collection);
 	}
 	
 	public void set(int index, SSDFunctionCall funcCall) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.UNKNOWN, funcCall, false);
+		set(Integer.toString(index), SSDType.UNKNOWN, funcCall);
 	}
 	
 	public void addNull(String name) {
 		checkIfObject();
-		set(name, SSDType.NULL, WORD_NULL, true);
+		set(name, SSDType.NULL, WORD_NULL);
 	}
 	
 	public void add(String name, boolean value) {
 		checkIfObject();
-		set(name, SSDType.BOOLEAN, Boolean.toString(value), true);
+		set(name, SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void add(String name, byte value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Byte.toString(value), true);
+		set(name, SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void add(String name, short value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Short.toString(value), true);
+		set(name, SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void add(String name, int value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Integer.toString(value), true);
+		set(name, SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void add(String name, long value) {
 		checkIfObject();
-		set(name, SSDType.INTEGER, Long.toString(value), true);
+		set(name, SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void add(String name, float value) {
 		checkIfObject();
-		set(name, SSDType.DECIMAL, Float.toString(value), true);
+		set(name, SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void add(String name, double value) {
 		checkIfObject();
-		set(name, SSDType.DECIMAL, Double.toString(value), true);
+		set(name, SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void add(String name, String value) {
 		checkIfObject();
-		set(name, SSDType.STRING, value, true);
+		set(name, SSDType.STRING, value);
 	}
 	
 	public void add(String name, SSDObject object) {
 		checkIfObject();
-		set(name, SSDType.UNKNOWN, object, true);
+		set(name, SSDType.UNKNOWN, object);
 	}
 	
 	public void add(String name, SSDCollection collection) {
 		checkIfObject();
-		set(name, SSDType.UNKNOWN, collection, true);
+		set(name, SSDType.UNKNOWN, collection);
 	}
 	
 	public void add(String name, SSDFunctionCall funcCall) {
 		checkIfObject();
-		set(name, SSDType.UNKNOWN, funcCall, true);
+		set(name, SSDType.UNKNOWN, funcCall);
 	}
 	
 	public void addNull() {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.NULL, WORD_NULL, true);
+		set(Integer.toString(nextIndex()), SSDType.NULL, WORD_NULL);
 	}
 	
 	public void add(boolean value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.BOOLEAN, Boolean.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void add(byte value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Byte.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void add(short value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Short.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void add(int value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Integer.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void add(long value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Long.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void add(float value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.DECIMAL, Float.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void add(double value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.DECIMAL, Double.toString(value), true);
+		set(Integer.toString(nextIndex()), SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void add(String value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.STRING, value, true);
+		set(Integer.toString(nextIndex()), SSDType.STRING, value);
 	}
 	
 	public void add(SSDObject object) {
@@ -778,7 +857,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		            : object != null
 		            	? object.getName()
 		            	: Integer.toString(nextIndex()),
-		    SSDType.UNKNOWN, object, true);
+		    SSDType.UNKNOWN, object);
 	}
 	
 	public void add(SSDCollection collection) {
@@ -786,7 +865,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		            : collection != null
 		            	? collection.getName()
 		            	: Integer.toString(nextIndex()),
-		    SSDType.UNKNOWN, collection, true);
+		    SSDType.UNKNOWN, collection);
 	}
 	
 	public void add(SSDFunctionCall funcCall) {
@@ -794,7 +873,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		            : funcCall != null
 		            	? funcCall.getName()
 		            	: Integer.toString(nextIndex()),
-		    SSDType.UNKNOWN, funcCall, true);
+		    SSDType.UNKNOWN, funcCall);
 	}
 	
 	public int length() {
@@ -840,8 +919,9 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			   (getName());
 	}
 	
-	public void addAnnotation(String name, SSDCollection data) {
-		annotations.add(new SSDAnnotation(name, data.objects));
+	public void addAnnotation(SSDAnnotation annotation) {
+		// Call the internal method
+		addAnnotation0(annotation);
 	}
 	
 	public boolean hasAnnotation(String name) {
@@ -915,7 +995,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			for(SSDAnnotation ann : annotations) {
 				if(annf) 	  annf = false; else
 				if(!compress) sb.append(CHAR_NEWLINE);
-				sb.append(ann.toString(compress));
+				sb.append(ann.toString(compress, invoke));
 			}
 			if(!compress) sb.append(CHAR_NEWLINE);
 		}
@@ -947,7 +1027,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 						if(annf) 	  annf = false; else
 						if(!compress) sb.append(CHAR_NEWLINE);
 						if(!compress) sb.append(tab1);
-						sb.append(ann.toString(compress));
+						sb.append(ann.toString(compress, invoke));
 					}
 					if(!compress) sb.append(CHAR_NEWLINE);
 				}
@@ -963,19 +1043,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 				}
 			}
 			if(node instanceof SSDObject) {
-				if(invoke && node instanceof SSDFunctionCall) {
-					SSDFunctionCall func  = (SSDFunctionCall) node;
-					SSDValue 		value = compress ? func.getValue()
-					         		                 : func.getFormattedValue(depth);
-					String			sval  = value != null ? value.toString()
-					      			                      : WORD_NULL;
-					if(compress) {
-						// There is no compress option, use SSDF compress function
-						sval = new String(SSDF.formatContent(sval.toCharArray()));
-					}
-					// Add the compressed function value
-					sb.append(sval);
-				} else sb.append(node.toString(compress));
+				sb.append(((SSDObject) node).toString(compress, invoke));
 			} else {
 				sb.append(((SSDCollection) node)
 				          		.toString(depth+1,
@@ -994,19 +1062,21 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	@Override
 	public String toString() {
-		return toString(false);
+		return toString(1, false, false, false);
 	}
 	
+	@Override
 	public String toString(boolean compress) {
 		return toString(1, compress, false, false);
 	}
 	
+	@Override
 	public String toString(boolean compress, boolean invoke) {
 		return toString(1, compress, false, invoke);
 	}
 	
 	public String toJSON() {
-		return toJSON(false);
+		return toString(1, false, true, false);
 	}
 	
 	public String toJSON(boolean compress) {

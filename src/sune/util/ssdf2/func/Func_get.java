@@ -20,12 +20,13 @@ public class Func_get implements SSDFunctionImpl {
 		if((node.isObject())) {
 			SSDObject object = (SSDObject) node;
 			switch(object.getType()) {
-				case NULL: 	  return null;
-				case BOOLEAN: return object.booleanValue();
-				case INTEGER: return object.longValue();
-				case DECIMAL: return object.doubleValue();
-				case STRING:  return object.stringValue();
-				case UNKNOWN: return object.stringValue();
+				case NULL: 	  	 return null;
+				case BOOLEAN:	 return object.booleanValue();
+				case INTEGER: 	 return object.longValue();
+				case DECIMAL: 	 return object.doubleValue();
+				case STRING:  	 return object.stringValue();
+				case STRING_VAR: return object.stringValue();
+				case UNKNOWN: 	 return object.stringValue();
 			}
 		} else if((node.isCollection())) {
 			return node.toString();

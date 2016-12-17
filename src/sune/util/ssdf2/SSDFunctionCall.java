@@ -60,28 +60,29 @@ public class SSDFunctionCall extends SSDObject {
 							    	new SSDObject(null, WORD_ANNOTATION_DEFAULT, fn));
 						}});
 					// Add the namespace to the function implementation
-					obj.addAnnotation(nsa);
+					obj.addAnnotation0(nsa);
 				} else {
 					namespace = space;
 				}
 			}
 			// Add value of the object based on its type
 			switch(obj.getType()) {
-				case NULL: 	  return null;
-				case BOOLEAN: return obj.booleanValue();
-				case INTEGER: return obj.longValue();
-				case DECIMAL: return obj.doubleValue();
-				case STRING:  return obj.stringValue();
-				case UNKNOWN: return ((namespace == null || namespace.isEmpty())
-										|| SSDF.func_isContentSimple(
-										   		call.funcName,
-										   		new ArrayList<SSDAnnotation>() {{
-										   			for(SSDAnnotation a : call.getAnnotations())
-										   				add(a);
-										   		}}) ?
-				                         "" : // Just do not add any prefix
-									 	(namespace + CHAR_NAME_DELIMITER)) +
-									 	(obj.stringValue());
+				case NULL: 	  	 return null;
+				case BOOLEAN: 	 return obj.booleanValue();
+				case INTEGER: 	 return obj.longValue();
+				case DECIMAL: 	 return obj.doubleValue();
+				case STRING:  	 return obj.stringValue();
+				case STRING_VAR: return obj.stringValue();
+				case UNKNOWN: 	 return ((namespace == null || namespace.isEmpty())
+											|| SSDF.func_isContentSimple(
+											   		call.funcName,
+											   		new ArrayList<SSDAnnotation>() {{
+											   			for(SSDAnnotation a : call.getAnnotations())
+											   				add(a);
+											   		}}) ?
+					                         "" : // Just do not add any prefix
+										 	(namespace + CHAR_NAME_DELIMITER)) +
+										 	(obj.stringValue());
 			}
 		} else if(node.isCollection()) {
 			SSDCollection coll = (SSDCollection) node;
@@ -172,13 +173,7 @@ public class SSDFunctionCall extends SSDObject {
 		return funcArgs;
 	}
 	
-	@Override
-	public String toString() {
-		return toString(false);
-	}
-	
-	@Override
-	public String toString(boolean compress) {
+	String toString(int depth, boolean compress, boolean invoke) {
 		StringBuilder buffer = new StringBuilder();
 		buffer.append(funcName);
 		buffer.append(CHAR_FUNCCALL_OB);
@@ -195,13 +190,28 @@ public class SSDFunctionCall extends SSDObject {
 			SSDAnnotation[] anns;
 			if((anns = arg.getAnnotations()).length > 0) {
 				for(SSDAnnotation ann : anns) {					
-					buffer.append(ann.toString(compress));
+					buffer.append(ann.toString(compress, invoke));
 					if(!compress) buffer.append(CHAR_SPACE);
 				}
 			}
-			buffer.append(arg.toString(compress));
+			buffer.append(arg.toString(compress, invoke));
 		}
 		buffer.append(CHAR_FUNCCALL_CB);
 		return buffer.toString();
+	}
+	
+	@Override
+	public String toString() {
+		return toString(0, false, false);
+	}
+	
+	@Override
+	public String toString(boolean compress) {
+		return toString(0, compress, false);
+	}
+	
+	@Override
+	public String toString(boolean compress, boolean invoke) {
+		return toString(0, compress, invoke);
 	}
 }

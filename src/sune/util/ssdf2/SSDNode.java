@@ -2,13 +2,14 @@ package sune.util.ssdf2;
 
 public interface SSDNode {
 	
-	public boolean isObject();
-	public boolean isCollection();
-	public SSDNode getParent();
-	public String getFullName();
-	public String getName();
-	public String toString(boolean compress);
-	public SSDAnnotation getAnnotation(String name);
-	public SSDAnnotation[] getAnnotations();
-	public SSDAnnotation[] getAnnotations(String name);
+	boolean isObject();
+	boolean isCollection();
+	SSDNode getParent();
+	String getFullName();
+	String getName();
+	String toString(boolean compress);
+	String toString(boolean compress, boolean invoke);
+	SSDAnnotation getAnnotation(String name);
+	SSDAnnotation[] getAnnotations();
+	SSDAnnotation[] getAnnotations(String name);
 }

@@ -3,6 +3,8 @@ package sune.util.ssdf2;
 import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
 import static sune.util.ssdf2.SSDF.CHAR_ESCAPE;
 import static sune.util.ssdf2.SSDF.CHAR_SINGLE_QUOTES;
+import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_CONCAT;
+import static sune.util.ssdf2.SSDF.CHAR_VARIABLE_SIGN;
 import static sune.util.ssdf2.SSDF.WORD_FALSE;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
 import static sune.util.ssdf2.SSDF.WORD_TRUE;
@@ -110,6 +112,9 @@ public enum SSDType {
 			return sb.toString();
 		}
 	},
+	STRING_VAR(null) {
+		// No formatting or fixing
+	},
 	UNKNOWN(null);
 	
 	private final String regex;
@@ -119,12 +124,69 @@ public enum SSDType {
 	
 	// Type recognition using RegExp
 	public static final SSDType recognize(String value) {
+		boolean tpstr = false;
+		String  regex;
 		for(SSDType type : values()) {
-			if(type == UNKNOWN) continue;
-			if(Pattern.matches(type.regex, value))
+			if((regex = type.regex) != null
+					&& Pattern.matches(regex, value)) {
+				if((type == STRING)) {
+					tpstr = true;
+					break;
+				}
 				return type;
+			}
 		}
-		return UNKNOWN;
+		// Quotes
+		boolean indq = false;
+		boolean insq = false;
+		// Escaping
+		boolean escaped = false;
+		int 	escape  = 0;
+		// Miscellaneous
+		boolean var = false;
+		boolean was = false;
+		boolean con = false;
+		// Check whether the value contains a variable
+		char[] chars = value.toCharArray();
+		for(int i = 0, l = chars.length, c; i < l; ++i) {
+			c = chars[i];
+			// Escape logic
+			if(escaped && --escape == 0) 	 escaped = false;
+			if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+			// Quotes logic
+			if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
+			if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
+			// Checking logic
+			if(!indq && !insq) {
+				if((var)) {
+					// Check if variable name is present and valid?
+					if((Character.isLetterOrDigit(c))
+							|| c == '_'
+							|| c == '.') {
+						// Do nothing?
+					} else if((c == CHAR_VARIABLE_CONCAT)) {
+						con = true;
+						var = false;
+					} else {
+						var = false;
+					}
+				} else {
+					if((c == CHAR_VARIABLE_CONCAT)) {
+						con = true;
+						was = true;
+					}
+					if((c == CHAR_VARIABLE_SIGN)) {
+						var = true;
+						was = true;
+						con = false;
+					}
+				}
+			}
+			// Additional logic
+			if((indq || insq || Character.isDigit(c)))
+				con = false;
+		}
+		return was ? (con ? UNKNOWN : STRING_VAR) : (tpstr ? STRING : UNKNOWN);
 	}
 	
 	// Type recognition using classes

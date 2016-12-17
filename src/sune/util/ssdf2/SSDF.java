@@ -20,10 +20,11 @@ import sune.util.ssdf2.SSDCollection.SSDCollectionType;
 public final class SSDF {
 	
 	// General characters
-	static final char CHAR_NEWLINE		  = '\n';
-	static final char CHAR_TAB			  = '\t';
-	static final char CHAR_SPACE		  = ' ';
-	static final char CHAR_NAME_DELIMITER = '.';
+	static final char CHAR_NEWLINE		  		= '\n';
+	static final char CHAR_TAB			  		= '\t';
+	static final char CHAR_SPACE		  		= ' ';
+	static final char CHAR_NAME_DELIMITER 		= '.';
+	static final char CHAR_ANNOTATION_DELIMITER = ':';
 	// General syntax
 	static final char CHAR_OBJECT_OB 	  = '{';
 	static final char CHAR_OBJECT_CB 	  = '}';
@@ -44,23 +45,26 @@ public final class SSDF {
 	static final char CHAR_FUNCCALL_OB 			   = '(';
 	static final char CHAR_FUNCCALL_CB 			   = ')';
 	static final char CHAR_FUNCCALL_ARGS_DELIMITER = ',';
+	// Variable syntax
+	static final char CHAR_VARIABLE_SIGN   = '$';
+	static final char CHAR_VARIABLE_CONCAT = '+';
 	// Syntax special words
 	static final String WORD_NULL  = "null";
 	static final String WORD_TRUE  = "true";
 	static final String WORD_FALSE = "false";
 	// Other special words
 	static final String WORD_ANNOTATION_DEFAULT = "value";
+	static final String WORD_VARIABLE_VALUE		= "value";
 	
 	// Forbid anyone to create an instance of this class
 	private SSDF() {
 	}
 	
 	static final char[] formatContent(char[] chars) {
-		if(chars == null) {
+		if((chars == null))
 			throw new IllegalArgumentException(
 				"Cannot format null array of characters!");
-		}
-		if(chars.length == 0) return chars;
+		if((chars.length == 0)) return chars;
 		// In double quotes
 		boolean indq 	= false;
 		// In single quotes
@@ -109,15 +113,14 @@ public final class SSDF {
 	
 	static final Map<String, SSDNode> readObjects(char[] chars, int off, int len,
 			SSDNode parent, boolean array, boolean annotation) {
-		if(chars == null) {
+		if((chars == null))
 			throw new IllegalArgumentException(
 				"Cannot read null array of characters!");
-		}
 		// Map where all the objects are stored
 		Map<String, SSDNode> map = new LinkedHashMap<>();
 		// Do some checking before the actual reading
 		int length = chars.length;
-		if(length == 0 || off < 0 || off >= length || len < 0 || off+len > length)
+		if((length == 0 || off < 0 || off >= length || len < 0 || off+len > length))
 			return map;
 		// In double quotes
 		boolean indq = false;
@@ -224,9 +227,15 @@ public final class SSDF {
 								mann = new ArrayList<>();
 								anns.put(annc, mann);
 							}
-							mann.add(new SSDAnnotation(tempName,
+							// Create the annoation object first
+							SSDAnnotation annObj = new SSDAnnotation(tempName);
+							Map<String, SSDNode> nodes
 								// Get all the data from the annotation content
-								readObjects(chars, i+1, f, null, false, true)));
+								= readObjects(chars, i+1, f, annObj, false, true);
+							// Add all gotten objects to the annotation
+							annObj.addObjects(nodes);
+							// Add the annotation object
+							mann.add(annObj);
 							bann 	 = false;
 							tempName = null;
 						}
@@ -261,12 +270,12 @@ public final class SSDF {
 										&& lastName != null))
 									tempName = lastName;
 							}
-							SSDCollection arr  = new SSDCollection(parent, tempName, isarr);
+							SSDCollection arr = new SSDCollection(parent, tempName, isarr);
 							arr.addObjects(readObjects(chars, i+1, f, arr, isarr, false));
 							// Add all the gotten annotations
 							List<SSDAnnotation> mann = anns.get(annc);
 							if(mann != null) {
-								arr.addAnnotations(mann);
+								arr.addAnnotations0(mann);
 								anns.remove(annc--);
 							}
 							map.put(tempName, arr);
@@ -298,7 +307,7 @@ public final class SSDF {
 								// Add all the gotten annotations
 								List<SSDAnnotation> mann = anns.get(annc);
 								if(mann != null) {
-									obj.addAnnotations(mann);
+									obj.addAnnotations0(mann);
 									anns.remove(annc--);
 								}
 								map.put(tempName, obj);
@@ -318,7 +327,7 @@ public final class SSDF {
 			}
 			// Add the current character if it can be added
 			if(cadd) temp.append((char) c);
-			// Special condition for the last character, so that also the last item will be adedd!
+			// Special condition for the last character, so that also the last item will be added!
 			if(i == l-1 && !insq && !indq) {
 				String value;
 				if(!(value = temp.toString()).isEmpty()) {
@@ -335,7 +344,7 @@ public final class SSDF {
 						// Add all the gotten annotations
 						List<SSDAnnotation> mann = anns.get(annc);
 						if(mann != null) {
-							obj.addAnnotations(mann);
+							obj.addAnnotations0(mann);
 							anns.remove(annc--);
 						}
 						map.put(tempName, obj);
@@ -470,6 +479,10 @@ public final class SSDF {
 	}
 	
 	public static final SSDCollection read(InputStream stream) {
+		if(stream == null) {
+			throw new IllegalArgumentException(
+				"Stream cannot be null!");
+		}
 		return read(streamToString(stream));
 	}
 	
@@ -478,17 +491,20 @@ public final class SSDF {
 			throw new IllegalArgumentException(
 				"File cannot be null!");
 		}
-		String path;
-		if((path = file.getPath()).startsWith("res:")) {
-			// Read a resource instead of a file
-			return read(resourceStream(path.substring(4).replace('\\', '/')));
-		}
 		try {
 			return read(streamToString(new FileInputStream(file)));
 		} catch(Exception ex) {
 			throw new IllegalStateException(
 				"An error has occurred while trying to read the given file!");
 		}
+	}
+	
+	public static final SSDCollection readResource(String path) {
+		if(path == null || path.isEmpty()) {
+			throw new IllegalArgumentException(
+				"Path cannot be null nor empty!");
+		}
+		return read(resourceStream(path));
 	}
 	
 	public static final SSDCollection readJSON(String json) {
