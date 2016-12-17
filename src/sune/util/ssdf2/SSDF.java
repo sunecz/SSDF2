@@ -46,8 +46,9 @@ public final class SSDF {
 	static final char CHAR_FUNCCALL_CB 			   = ')';
 	static final char CHAR_FUNCCALL_ARGS_DELIMITER = ',';
 	// Variable syntax
-	static final char CHAR_VARIABLE_SIGN   = '$';
-	static final char CHAR_VARIABLE_CONCAT = '+';
+	static final char CHAR_VARIABLE_SIGN   	  = '$';
+	static final char CHAR_VARIABLE_DELIMITER = '.';
+	static final char CHAR_VARIABLE_CONCAT 	  = '+';
 	// Syntax special words
 	static final String WORD_NULL  = "null";
 	static final String WORD_TRUE  = "true";
@@ -55,6 +56,8 @@ public final class SSDF {
 	// Other special words
 	static final String WORD_ANNOTATION_DEFAULT = "value";
 	static final String WORD_VARIABLE_VALUE		= "value";
+	static final String WORD_VARIABLE_THIS		= "this";
+	static final String WORD_VARIABLE_MAIN		= "main";
 	
 	// Forbid anyone to create an instance of this class
 	private SSDF() {

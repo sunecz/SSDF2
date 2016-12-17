@@ -892,9 +892,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public SSDCollectionType getType() {
-		return isArray ?
-				SSDCollectionType.ARRAY :
-				SSDCollectionType.OBJECT;
+		return isArray ? SSDCollectionType.ARRAY :
+						 SSDCollectionType.OBJECT;
 	}
 	
 	public SSDNode[] getNodes() {
@@ -914,9 +913,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	@Override
 	public String getFullName() {
-		SSDNode p = parent.get();
-		return (p == null ? "" : (p.getFullName() + CHAR_NAME_DELIMITER)) +
-			   (getName());
+		SSDNode p = getParent();
+		return (p == null || p.getName() == null
+					? ""
+					: p.getFullName() + CHAR_NAME_DELIMITER)
+				+ getName();
 	}
 	
 	public void addAnnotation(SSDAnnotation annotation) {
