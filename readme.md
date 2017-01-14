@@ -523,8 +523,14 @@ To concatenate strings or variables `+` character can be used.
 ## JSON
 This library can be also used for reading JSON strings from files, streams, and strings.
 ```java
-SSDCollection data = SSDF.readJSON(jsonString);
-// ... some operations with the json data
+// From a string
+SSDCollection data = SSDF.readJSON(string);
+// From a file
+SSDCollection data = SSDF.readJSON(file);
+// From a stream
+SSDCollection data = SSDF.readJSON(stream);
+// From a resource
+SSDCollection data = SSDF.readJSONResource(path);
 ```
 
 Method `data.toJSON()` can be used in order to get the JSON string back.
