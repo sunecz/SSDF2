@@ -387,9 +387,9 @@ public final class SSDF {
 	
 	static final SSDCollection convertJSONNames(SSDCollection sc) {
 		String cname 	 = sc.getName();
-		SSDCollection nc = cname.isEmpty() ?
-			SSDCollection.empty() :
-			new SSDCollection(
+		SSDCollection nc = cname == null || cname.isEmpty()
+			? SSDCollection.empty()
+			: new SSDCollection(
 				sc.getParent(),
 				cname.startsWith("\"") && cname.endsWith("\"") ?
 					cname.substring(1, cname.length()-1) :
@@ -508,6 +508,14 @@ public final class SSDF {
 				"Path cannot be null nor empty!");
 		}
 		return read(resourceStream(path));
+	}
+	
+	public static final SSDCollection readJSONResource(String path) {
+		if(path == null || path.isEmpty()) {
+			throw new IllegalArgumentException(
+				"Path cannot be null nor empty!");
+		}
+		return readJSON(resourceStream(path));
 	}
 	
 	public static final SSDCollection readJSON(String json) {
