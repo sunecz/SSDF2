@@ -8,8 +8,9 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ public final class SSDF {
 	private SSDF() {
 	}
 	
-	static final char[] formatContent(char[] chars) {
+	static final char[] format(char[] chars) {
 		if((chars == null))
 			throw new IllegalArgumentException(
 				"Cannot format null array of characters!");
@@ -114,21 +115,18 @@ public final class SSDF {
 		return nchars;
 	}
 	
-	static final Map<String, SSDNode> readObjects(char[] chars, int off, int len,
-			SSDNode parent, boolean array, boolean annotation) {
+	static final SSDCollection readObjects(char[] chars, int off, int len) {
 		if((chars == null))
 			throw new IllegalArgumentException(
 				"Cannot read null array of characters!");
-		// Map where all the objects are stored
-		Map<String, SSDNode> map = new LinkedHashMap<>();
 		// Do some checking before the actual reading
 		int length = chars.length;
 		if((length == 0 || off < 0 || off >= length || len < 0 || off+len > length))
-			return map;
+			return null;
 		// In double quotes
-		boolean indq = false;
+		boolean indq 	   = false;
 		// In single quotes
-		boolean insq = false;
+		boolean insq 	   = false;
 		// Temporary objects for names and values
 		StringBuilder temp = new StringBuilder();
 		String tempName    = null;
@@ -145,12 +143,20 @@ public final class SSDF {
 		int annc		   = 0;
 		// Whether the annotation sign was encountered
 		boolean bann 	   = false;
+		// Whether the value should be defined now
+		boolean isval 	   = false;
 		// Annotations for current object/collection
 		Map<Integer, List<SSDAnnotation>> anns = new LinkedHashMap<>();
-		// Whether the value should be defined now
-		boolean isval 	   = array;
-		// Function call for current object, if null no function call is presented
-		SSDFunctionCall fc = null;
+		// Functional node, holds array, or annotation, or function call 
+		Deque<SSDNode> parents = new ArrayDeque<>();
+		// Objects for handling information about parent
+		SSDNode parent 	   = null;
+		boolean array 	   = false;
+		boolean annotation = false;
+		boolean function   = false;
+		boolean isfsimple  = false;
+		boolean	infsimple  = false;
+		int		ctfsimple  = 0;
 		// Read the characters and construct the map
 		for(int i = off, l = off + len, c; i < l; ++i) {
 			cadd = true;
@@ -166,199 +172,264 @@ public final class SSDF {
 				// Not in quotes
 				if(!indq && !insq) {
 					cadd = false;
-					if((c == CHAR_OBJECT_OB || c == CHAR_ARRAY_OB) ||
-					   // Annotations
-					   ((!isval && c == CHAR_ANNOTATION_OB) ||
-						(bann   && c == CHAR_SPACE)) 		||
-					   // Function call
-					   (isval && (c == CHAR_FUNCCALL_OB))) {
-						boolean isarr = c == CHAR_ARRAY_OB;
-						boolean isann = c == CHAR_ANNOTATION_OB && !isval;
-						boolean isfcl = c == CHAR_FUNCCALL_OB   &&  isval;
-						boolean dq 	  = false;
-						boolean sq	  = false;
-						boolean es	  = false;
-						int f 		  = 0;
-						int b		  = 1;
-						int e		  = 0;
-						// Get content length of the object/array
-						// NOTE: This should be avoided if the desired functionality
-						// is to work in online mode, that means in mode where there
-						// is no looking forward or backward.
-						for(int k = i+1, h; k < l; ++k) {
-							h = chars[k];
-							// Escape logic
-							if(es && --e == 0) 	 		es = false;
-							if(h == CHAR_ESCAPE && !es) es = (e = 2) > 0; else
-							// Quotes logic
-							if(h == CHAR_DOUBLE_QUOTES && !sq) dq = !dq; else
-							if(h == CHAR_SINGLE_QUOTES && !dq) sq = !sq; else
-							// Reading logic
-							if(!sq && !dq) {
-								if(isarr) {
-									if(h == CHAR_ARRAY_OB) ++b; else
-									if(h == CHAR_ARRAY_CB && --b == 0) {
-										f = k - i - 1; break;
-									}
-								} else if(isann) {
-									if(h == CHAR_ANNOTATION_OB) ++b; else
-									if(h == CHAR_ANNOTATION_CB && --b == 0) {
-										f = k - i - 1; break;
-									}
-								} else if(isfcl) {
-									if(h == CHAR_FUNCCALL_OB) ++b; else
-									if(h == CHAR_FUNCCALL_CB && --b == 0) {
-										f = k - i - 1; break;
-									}
-								} else {
-									if(h == CHAR_OBJECT_OB) ++b; else
-									if(h == CHAR_OBJECT_CB && --b == 0) {
-										f = k - i - 1; break;
-									}
-								}
-							}
+					// Special loop for content-simple functions
+					if((isfsimple)) {
+						if(c == CHAR_FUNCCALL_OB) ++ctfsimple; else
+						if(c == CHAR_FUNCCALL_CB) --ctfsimple;
+						if((ctfsimple > 0)) {
+							infsimple = true;
+							cadd 	  = true;
+						} else {
+							infsimple = false;
 						}
-						// Annotations
-						if(isann || bann) {
-							// Get the annotation name
-							tempName = temp.toString();
-							// Clear the temporary string
-							temp.setLength(0);
-							// Add the annotation
-							List<SSDAnnotation> mann = anns.get(annc);
-							if((mann == null)) {
-								mann = new ArrayList<>();
-								anns.put(annc, mann);
-							}
-							// Create the annoation object first
-							SSDAnnotation annObj = new SSDAnnotation(tempName);
-							Map<String, SSDNode> nodes
-								// Get all the data from the annotation content
-								= readObjects(chars, i+1, f, annObj, false, true);
-							// Add all gotten objects to the annotation
-							annObj.addObjects(nodes);
-							// Add the annotation object
-							mann.add(annObj);
-							bann 	 = false;
-							tempName = null;
-						}
-						// Function call
-						else if(isfcl) {
-							// Check the object's name first
-							if((tempName == null && array))
-								tempName = Integer.toString(counter++);
-							// Get function name
-							String 	  funcName = temp.toString();
-							SSDNode[] funcArgs;
-							if((func_isContentSimple(funcName, anns.get(annc)))) {
-								funcArgs = new SSDNode[] {
-									new SSDObject(null, tempName, new String(chars, i+1, f))
-								};
-							} else {
-								// Get function parameters
-								Map<String, SSDNode> funcMap  = readObjects(chars, i+1, f, null, true, false);
-								Collection<SSDNode>  funcColl = funcMap.values();
-								funcArgs = funcColl.toArray(new SSDNode[funcColl.size()]);
-							}
-							// Create a function call
-							fc = new SSDFunctionCall(parent, tempName, funcName, funcArgs);
-						}
-						// Arrays or objects
-						else {
-							if((array)) {
-								if((tempName == null))
-									tempName = Integer.toString(counter++);
-							} else {
-								if((tempName == null
-										&& lastName != null))
-									tempName = lastName;
-							}
-							SSDCollection arr = new SSDCollection(parent, tempName, isarr);
-							arr.addObjects(readObjects(chars, i+1, f, arr, isarr, false));
-							// Add all the gotten annotations
-							List<SSDAnnotation> mann = anns.get(annc);
-							if(mann != null) {
-								arr.addAnnotations0(mann);
-								anns.remove(annc--);
-							}
-							map.put(tempName, arr);
-							tempName = null;
-						}
-						// Increase the index
-						i += f;
-					} else if(c == CHAR_NV_DELIMITER 	||
-							  c == CHAR_ANNOTATION_SIGN ||
-							 (annotation &&
-								c == CHAR_ANNOTATION_NV_DELIMITER)) {
-						bann 	 = c == CHAR_ANNOTATION_SIGN;
-						isval	 = c != CHAR_ANNOTATION_SIGN || array;
-						tempName = temp.toString();
-						if(!annotation
-								&& !tempName.isEmpty())
-							lastName = tempName;
-						temp.setLength(0);
-					} else if(c == CHAR_ITEM_DELIMITER ||
-							 (annotation &&
-								c == CHAR_ANNOTATION_ITEM_DELIMITER)) {
-						String value;
-						if(!(value = temp.toString()).isEmpty()) {
-							if((tempName == null && array))
-								tempName = Integer.toString(counter++);
-							if(tempName != null) {
-								SSDObject obj = fc != null ?
-									fc : new SSDObject(parent, tempName, value);
-								// Add all the gotten annotations
-								List<SSDAnnotation> mann = anns.get(annc);
-								if(mann != null) {
-									obj.addAnnotations0(mann);
-									anns.remove(annc--);
-								}
-								map.put(tempName, obj);
+					}
+					if(!infsimple) {
+						if(// Objects and arrays
+						   (c == CHAR_OBJECT_OB ||
+						    c == CHAR_ARRAY_OB) ||
+						   // Annotations
+						   ((!isval && c == CHAR_ANNOTATION_OB) ||
+							(bann   && c == CHAR_SPACE)) 		||
+						   // Function call
+						   (isval && (c == CHAR_FUNCCALL_OB))) {
+							// Current object is an annotation
+							if(((c == CHAR_ANNOTATION_OB && !isval) || bann)) {
+								// Get the annotation name
+								tempName = temp.toString();
+								// Clear the temporary string
 								temp.setLength(0);
+								// Add the annotation to the annotations list
+								List<SSDAnnotation> mann;
+								if((mann = anns.get(annc)) == null) {
+									mann = new ArrayList<>();
+									anns.put(annc, mann);
+								}
+								// Create the annoation object first
+								SSDAnnotation annObj = new SSDAnnotation(tempName);
+								// If the annotation has some items
+								if(!(bann && c == CHAR_SPACE)) {
+									// Add the annotation object to the parents
+									parents.push(annObj);
+									// Set the current parent
+									parent 	   = annObj;
+									array 	   = false;
+									annotation = true;
+									function   = false;
+								}
+								// Add the annotation object
+								mann.add(annObj);
+								bann 	 = false;
 								tempName = null;
-								fc		 = null;
+							}
+							// Current object is a function call
+							else if((c == CHAR_FUNCCALL_OB && isval)) {
+								// Check the function call's name first
+								if((tempName == null && array))
+									tempName = Integer.toString(counter++);
+								// Get the function call's name
+								String funcName = temp.toString();
+								// Clear the temporary string
+								temp.setLength(0);
+								// Create a function call
+								SSDFunctionCall fc = new SSDFunctionCall(parent, tempName, funcName);
+								// Add the function call to the parents
+								parents.push(fc);
+								// Set the current parent
+								parent 	   = fc;
+								array 	   = true;
+								annotation = false;
+								function   = true;
+								isfsimple  = func_isContentSimple(funcName, anns.get(annc));
+								if(isfsimple) ctfsimple = 1;
+							}
+							// Current object is an array or an object
+							else {
+								if((array)) {
+									if((tempName == null))
+										tempName = Integer.toString(counter++);
+								} else {
+									if((tempName == null
+											&& lastName != null))
+										tempName = lastName;
+								}
+								boolean isarr = c == CHAR_ARRAY_OB;
+								// Create a new collection with the given name
+								SSDCollection arr;
+								if((parents.isEmpty())) {
+									// If no main object has been yet added, add one
+									arr = new SSDCollection(parent, tempName);
+								} else {
+									// Add a regular array or object
+									arr = new SSDCollection(parent, tempName, isarr);
+								}
+								// Add the object to the parents
+								parents.push(arr);
+								if(!annotation) {
+									// Add all the gotten annotations
+									List<SSDAnnotation> mann;
+									if((mann = anns.get(annc)) != null) {
+										arr .addAnnotations0(mann);
+										anns.remove(annc--);
+									}
+								}
+								addToParent(parent, tempName, arr);
+								// Set the current parent
+								parent 	   = arr;
+								array 	   = isarr;
+								annotation = false;
+								function   = false;
+								// Reset the temporary name
+								tempName = null;
 							}
 						}
-						isval = array;
-						++annc;
-					} else if(c == CHAR_OBJECT_CB ||
-							  c == CHAR_ARRAY_CB  ||
-							  c == CHAR_ANNOTATION_CB) {
-						cadd = false;
-					} else cadd = true;
+						// Item name delimiter or annotation sign
+						else if((c == CHAR_NV_DELIMITER    ||
+								 c == CHAR_ANNOTATION_SIGN ||
+								 (annotation &&
+									c == CHAR_ANNOTATION_NV_DELIMITER))) {
+							bann 	 = c == CHAR_ANNOTATION_SIGN;
+							isval	 = c != CHAR_ANNOTATION_SIGN || array;
+							tempName = temp.toString();
+							if(!annotation
+									&& !tempName.isEmpty())
+								lastName = tempName;
+							temp.setLength(0);
+						}
+						// Item delimiter
+						else if((c == CHAR_ITEM_DELIMITER ||
+								(annotation &&
+									c == CHAR_ANNOTATION_ITEM_DELIMITER) ||
+								(function &&
+									c == CHAR_FUNCCALL_ARGS_DELIMITER))) {
+							String value;
+							if(!(value = temp.toString()).isEmpty()) {
+								if((tempName == null && (array || function)))
+									tempName = Integer.toString(counter++);
+								if((tempName == null && annotation))
+									tempName = WORD_ANNOTATION_DEFAULT;
+								if((tempName != null)) {
+									SSDObject obj = new SSDObject(parent, tempName, value);
+									if(!annotation) {
+										// Add all the gotten annotations
+										List<SSDAnnotation> mann;
+										if((mann = anns.get(annc)) != null) {
+											obj .addAnnotations0(mann);
+											anns.remove(annc--);
+										}
+									}
+									addToParent(parent, tempName, obj);
+									temp.setLength(0);
+									tempName = null;
+								}
+							}
+							isval = array;
+							if(!annotation) ++annc;
+						}
+						// Closing brackets
+						else if(c == CHAR_OBJECT_CB 	||
+								c == CHAR_ARRAY_CB  	||
+								c == CHAR_ANNOTATION_CB ||
+								c == CHAR_FUNCCALL_CB) {
+							// Add last item in an object, or an array, if needed
+							String value;
+							if(!(value = temp.toString()).isEmpty()) {
+								if((tempName == null && (array || function)))
+									tempName = Integer.toString(counter++);
+								if((tempName == null && annotation))
+									tempName = WORD_ANNOTATION_DEFAULT;
+								if((tempName != null)) {
+									SSDObject obj = new SSDObject(parent, tempName, value);
+									if(!annotation) {
+										// Add all the gotten annotations
+										List<SSDAnnotation> mann;
+										if((mann = anns.get(annc)) != null) {
+											obj .addAnnotations0(mann);
+											anns.remove(annc--);
+										}
+									}
+									addToParent(parent, tempName, obj);
+									temp.setLength(0);
+									tempName = null;
+								}
+							}
+							isval = array;
+							if(!annotation) ++annc;
+							// Do not add this character
+							cadd = false;
+							// Remove the currently used parent
+							SSDNode par = parents.pop();
+							if((par != null)) {
+								// The main object was removed
+								if((parents.isEmpty()
+										&& par.getName() == null)) {
+									SSDCollection main = (SSDCollection) par;
+									// Add all the gotten annotations
+									List<SSDAnnotation> mann;
+									if((mann = anns.get(annc)) != null) {
+										main.addAnnotations0(mann);
+										anns.remove(annc--);
+									}
+									// Return the main object
+									return main;
+								}
+								// Add the constructed function
+								else if((function)) {
+									isfsimple 				 = false; // important
+									SSDFunctionCall func 	 = (SSDFunctionCall) par;
+									String			funcName = func.getName();
+									addToParent(parents.peek(), funcName, func);
+								}
+							}
+							// Set the current parent
+							parent 	   = parents.peek();
+							array 	   = isParentArray(parent);
+							annotation = isParentAnnotation(parent);
+							function   = isParentFunctionCall(parent);
+						}
+						// All other characters should be added
+						else cadd = true;
+					}
 				}
 			}
 			// Add the current character if it can be added
 			if(cadd) temp.append((char) c);
-			// Special condition for the last character, so that also the last item will be added!
-			if(i == l-1 && !insq && !indq) {
-				String value;
-				if(!(value = temp.toString()).isEmpty()) {
-					if((array)) {
-						if((tempName == null))
-							tempName = Integer.toString(counter++);
-					} else if((annotation)) {
-						if((tempName == null))
-							tempName = WORD_ANNOTATION_DEFAULT;
-					}
-					if((tempName != null)) {
-						SSDObject obj = fc != null ?
-							fc : new SSDObject(parent, tempName, value);
-						// Add all the gotten annotations
-						List<SSDAnnotation> mann = anns.get(annc);
-						if(mann != null) {
-							obj.addAnnotations0(mann);
-							anns.remove(annc--);
-						}
-						map.put(tempName, obj);
-						temp.setLength(0);
-						tempName = null;
-						fc		 = null;
-					}
-				}
+		}
+		// Error, bad formatting, or whatever else happened
+		return null;
+	}
+	
+	static final void addToParent(SSDNode parent, String name, SSDNode object) {
+		if((parent instanceof SSDCollection)) {
+			SSDCollection coll = (SSDCollection) parent;
+			if((coll.getType() == SSDCollectionType.ARRAY)) {
+				coll.addObject(object);
+			} else {
+				coll.addObject(name, object);
+			}
+		} else if((parent instanceof SSDFunctionCall)) {
+			SSDFunctionCall call = (SSDFunctionCall) parent;
+			call.addArg(object);
+		}
+	}
+	
+	static final boolean isParentArray(SSDNode parent) {
+		if((parent != null)) {
+			if((parent instanceof SSDCollection)) {
+				return ((SSDCollection) parent).getType()
+							== SSDCollectionType.ARRAY;
 			}
 		}
-		return map;
+		return false;
+	}
+	
+	static final boolean isParentAnnotation(SSDNode parent) {
+		// Null check is redundant
+		return parent instanceof SSDAnnotation;
+	}
+	
+	static final boolean isParentFunctionCall(SSDNode parent) {
+		// Null check is redundant
+		return parent instanceof SSDFunctionCall;
 	}
 	
 	static final Charset CHARSET = Charset.forName("UTF-8");
@@ -440,8 +511,6 @@ public final class SSDF {
 						}
 					}
 				}
-				if(!namespace.endsWith(Character.toString(CHAR_NAME_DELIMITER)))
-					namespace += CHAR_NAME_DELIMITER;
 			} else {
 				namespace = ""; // Namespace defined in funcName
 			}
@@ -476,9 +545,8 @@ public final class SSDF {
 			throw new IllegalArgumentException(
 				"Content cannot be null!");
 		}
-		char[] chars = formatContent(content.toCharArray());
-		return (SSDCollection) readObjects(chars, 0, chars.length,
-			null, false, false).get(null);
+		char[] chars = format(content.toCharArray());
+		return readObjects(chars, 0, chars.length);
 	}
 	
 	public static final SSDCollection read(InputStream stream) {
