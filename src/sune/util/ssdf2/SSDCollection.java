@@ -45,7 +45,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	SSDCollection(SSDNode parent, String name, boolean isArray,
 			Map<String, SSDNode> objects,
 			List<SSDAnnotation> annotations) {
-		checkArgs(parent, name, objects);
+		checkArgs(parent, name, objects, false);
 		this.parent  = new SSDProperty<>(parent);
 		this.name 	 = new SSDProperty<>(name);
 		this.isArray = isArray;
@@ -54,8 +54,21 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		this.annotations = annotations;
 	}
 	
-	static final void checkArgs(SSDNode parent, String name, Map<String, SSDNode> objects) {
-		if(name == null && parent != null) {
+	// Method for creating the main parent (object) of the data structure
+	SSDCollection(SSDNode parent, String name) {
+		Map<String, SSDNode> objects = new LinkedHashMap<>();
+  		checkArgs(parent, name, objects, true);
+  		this.parent  = new SSDProperty<>(parent);
+  		this.name 	 = new SSDProperty<>(name);
+  		this.isArray = false; // main object is not an array
+  		this.objects = objects;
+  		// Annotations
+  		this.annotations = new ArrayList<>();
+  	}
+	
+	static final void checkArgs(SSDNode parent, String name, Map<String, SSDNode> objects,
+			boolean isMainObject) { // Needs to be checked
+		if(name == null && parent != null && !isMainObject) {
 			throw new IllegalArgumentException(
 				"Name of a collection cannot be null!");
 		}
@@ -99,6 +112,12 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 				"Object cannot be null!");
 		}
 		this.objects.put(name, object);
+	}
+	
+	void addObject(SSDNode object) {
+		checkIfArray();
+		String name = Integer.toString(nextIndex());
+		addObject(name, object);
 	}
 	
 	Map<String, SSDNode> objects() {
@@ -986,28 +1005,26 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return sb.toString();
 	}
 	
-	String toString(int depth, boolean compress, boolean json, boolean invoke) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke, boolean info) {
 		String tab0 	 = tabString(depth-1);
 		String tab1 	 = tab0 + CHAR_TAB;
 		StringBuilder sb = new StringBuilder();
 		// Append all annotations
-		if(depth == 1 && !annotations.isEmpty() && !json) {
+		if(info && !annotations.isEmpty() && !json) {
 			boolean annf = true;
 			for(SSDAnnotation ann : annotations) {
 				if(annf) 	  annf = false; else
 				if(!compress) sb.append(CHAR_NEWLINE);
 				sb.append(ann.toString(compress, invoke));
 			}
-			if(!compress) sb.append(CHAR_NEWLINE);
+			if(!compress) {
+				sb.append(CHAR_NEWLINE);
+				sb.append(tab0);
+			}
 		}
 		sb.append(isArray ? CHAR_ARRAY_OB : CHAR_OBJECT_OB);
 		boolean first = true;
 		for(SSDNode node : objects.values()) {
-			if((node instanceof SSDObject)
-					&& ((SSDObject) node).getType() == SSDType.UNKNOWN
-					&& json
-					&& !invoke)
-				continue;
 			if((first)) {
 				if(!compress) {
 					sb.append(CHAR_NEWLINE);
@@ -1043,14 +1060,17 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					sb.append(CHAR_SPACE);
 				}
 			}
-			if(node instanceof SSDObject) {
-				sb.append(((SSDObject) node).toString(compress, invoke));
+			if((node instanceof SSDFunctionCall)) {
+				sb.append(((SSDFunctionCall) node).toString(0, compress, json, invoke));
+			} else if((node instanceof SSDObject)) {
+				sb.append(((SSDObject) node).toString(0, compress, json, invoke));
 			} else {
 				sb.append(((SSDCollection) node)
 				          		.toString(depth+1,
 				          		          compress,
 				          		          json,
-				          		          invoke));
+				          		          invoke,
+				          		          false));
 			}
 		}
 		if(!compress) {
@@ -1063,29 +1083,29 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	@Override
 	public String toString() {
-		return toString(1, false, false, false);
+		return toString(1, false, false, false, true);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(1, compress, false, false);
+		return toString(1, compress, false, false, true);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(1, compress, false, invoke);
+		return toString(1, compress, false, invoke, true);
 	}
 	
 	public String toJSON() {
-		return toString(1, false, true, false);
+		return toString(1, false, true, false, false);
 	}
 	
 	public String toJSON(boolean compress) {
-		return toString(1, compress, true, false);
+		return toString(1, compress, true, false, false);
 	}
 	
 	public String toJSON(boolean compress, boolean invoke) {
-		return toString(1, compress, true, invoke);
+		return toString(1, compress, true, invoke, false);
 	}
 
 	@Override

@@ -88,7 +88,7 @@ public class SSDObject implements SSDNode {
 	}
 	
 	static final String compress(String value) {
-		return new String(SSDF.formatContent(value.toCharArray()));
+		return new String(SSDF.format(value.toCharArray()));
 	}
 	
 	public static SSDObject of(Object value) {
@@ -277,7 +277,7 @@ public class SSDObject implements SSDNode {
 		return WORD_NULL;
 	}
 	
-	String toString(int depth, boolean compress, boolean invoke) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke) {
 		if(invoke && this instanceof SSDFunctionCall) {
 			SSDFunctionCall func  = (SSDFunctionCall) this;
 			SSDValue 		value = compress ? func.getValue()
@@ -407,22 +407,27 @@ public class SSDObject implements SSDNode {
 				}
 				sval = sb.toString();
 			}
+			if(json && (type == SSDType.STRING_VAR ||
+						type == SSDType.UNKNOWN)) {
+				sval = sval.replaceAll("\"", "\\\\\"");
+				sval = CHAR_DOUBLE_QUOTES + sval + CHAR_DOUBLE_QUOTES;
+			}
 			return sval;
 		}
 	}
 	
 	@Override
 	public String toString() {
-		return toString(0, false, false);
+		return toString(0, false, false, false);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(0, compress, false);
+		return toString(0, compress, false, false);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(0, compress, invoke);
+		return toString(0, compress, false, invoke);
 	}
 }

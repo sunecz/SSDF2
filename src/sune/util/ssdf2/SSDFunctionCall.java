@@ -1,5 +1,6 @@
 package sune.util.ssdf2;
 
+import static sune.util.ssdf2.SSDF.CHAR_DOUBLE_QUOTES;
 import static sune.util.ssdf2.SSDF.CHAR_FUNCCALL_ARGS_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_FUNCCALL_CB;
 import static sune.util.ssdf2.SSDF.CHAR_FUNCCALL_OB;
@@ -8,17 +9,24 @@ import static sune.util.ssdf2.SSDF.CHAR_NEWLINE;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.CHAR_TAB;
 import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
+import static sune.util.ssdf2.SSDF.WORD_NULL;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class SSDFunctionCall extends SSDObject {
 	
-	private final String    funcName;
-	private final SSDNode[] funcArgs;
+	private final String 	   funcName;
+	private final Set<SSDNode> funcArgs;
 	
-	SSDFunctionCall(SSDNode parent, String name, String funcName, SSDNode[] funcArgs) {
+	SSDFunctionCall(SSDNode parent, String name, String funcName) {
+		this(parent, name, funcName, new LinkedHashSet<>());
+	}
+	
+	SSDFunctionCall(SSDNode parent, String name, String funcName, Set<SSDNode> funcArgs) {
 		super(parent, name, SSDType.UNKNOWN, new SSDValue(""), new SSDValue(""));
 		this.funcName = funcName;
 		this.funcArgs = funcArgs;
@@ -94,7 +102,7 @@ public class SSDFunctionCall extends SSDObject {
 		return null;
 	}
 	
-	static final Object[] convArgs(SSDFunctionCall call, String namespace, SSDNode[] nodes) {
+	static final Object[] convArgs(SSDFunctionCall call, String namespace, Set<SSDNode> nodes) {
 		List<Object> list = new ArrayList<>();
 		for(SSDNode arg : nodes)
 			list.add(funcArgConv(call, namespace, arg));
@@ -108,6 +116,15 @@ public class SSDFunctionCall extends SSDObject {
 			return null;
 		SSDObject obj = nsa.getObject(WORD_ANNOTATION_DEFAULT);
 		return obj == null ? null : obj.stringValue();
+	}
+	
+	void addArg(SSDNode node) {
+		funcArgs.add(node);
+	}
+	
+	void addArgs(SSDNode[] nodes) {
+		for(SSDNode node : nodes)
+			addArg(node);
 	}
 	
 	public final Object[] invoke() {
@@ -170,48 +187,71 @@ public class SSDFunctionCall extends SSDObject {
 	}
 	
 	public SSDNode[] getFunctionArgs() {
-		return funcArgs;
+		return funcArgs.toArray(new SSDNode[funcArgs.size()]);
 	}
 	
-	String toString(int depth, boolean compress, boolean invoke) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke) {
 		StringBuilder buffer = new StringBuilder();
-		buffer.append(funcName);
-		buffer.append(CHAR_FUNCCALL_OB);
-		boolean first = true;
-		for(SSDNode arg : funcArgs) {
-			if((first)) {
-				first = false;
-			} else {
-				buffer.append(CHAR_FUNCCALL_ARGS_DELIMITER);
-				if(!compress)
-					buffer.append(CHAR_SPACE);
-			}
-			// Append all argument's annotations
-			SSDAnnotation[] anns;
-			if((anns = arg.getAnnotations()).length > 0) {
-				for(SSDAnnotation ann : anns) {					
-					buffer.append(ann.toString(compress, invoke));
-					if(!compress) buffer.append(CHAR_SPACE);
+		if((invoke)) {
+			for(Object value : invoke()) {
+				if((value instanceof SSDCollection)) {
+					SSDCollection coll = (SSDCollection) value;
+					buffer.append(coll.toString(depth+2,
+					                            compress,
+					                            json,
+					                            invoke,
+					                            true));
+				} else {
+					buffer.append(value == null ? WORD_NULL
+					                            : value.toString());
 				}
 			}
-			buffer.append(arg.toString(compress, invoke));
+		} else {
+			if(json) {
+				buffer.append(CHAR_DOUBLE_QUOTES);
+			}
+			buffer.append(funcName);
+			buffer.append(CHAR_FUNCCALL_OB);
+			boolean first = true;
+			for(SSDNode arg : funcArgs) {
+				if((first)) {
+					first = false;
+				} else {
+					buffer.append(CHAR_FUNCCALL_ARGS_DELIMITER);
+					if(!compress)
+						buffer.append(CHAR_SPACE);
+				}
+				// Append all argument's annotations
+				SSDAnnotation[] anns;
+				if((anns = arg.getAnnotations()).length > 0) {
+					for(SSDAnnotation ann : anns) {					
+						buffer.append(ann.toString(compress, invoke));
+						if(!compress) buffer.append(CHAR_SPACE);
+					}
+				}
+				buffer.append(arg.toString(compress, invoke)
+				              	 .replaceAll("\"", "\\\\\""));
+			}
+			buffer.append(CHAR_FUNCCALL_CB);
+			if(json) {
+				buffer.append(CHAR_DOUBLE_QUOTES);
+			}
 		}
-		buffer.append(CHAR_FUNCCALL_CB);
 		return buffer.toString();
 	}
 	
 	@Override
 	public String toString() {
-		return toString(0, false, false);
+		return toString(0, false, false, false);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(0, compress, false);
+		return toString(0, compress, false, false);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(0, compress, invoke);
+		return toString(0, compress, false, invoke);
 	}
 }
