@@ -5,12 +5,11 @@ import static sune.util.ssdf2.SSDF.CHAR_FUNCCALL_ARGS_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_FUNCCALL_CB;
 import static sune.util.ssdf2.SSDF.CHAR_FUNCCALL_OB;
 import static sune.util.ssdf2.SSDF.CHAR_NAME_DELIMITER;
-import static sune.util.ssdf2.SSDF.CHAR_NEWLINE;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
-import static sune.util.ssdf2.SSDF.CHAR_TAB;
 import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -84,9 +83,9 @@ public class SSDFunctionCall extends SSDObject {
 				case UNKNOWN: 	 return ((namespace == null || namespace.isEmpty())
 											|| SSDF.func_isContentSimple(
 											   		call.funcName,
-											   		new ArrayList<SSDAnnotation>() {{
+											   		new ArrayDeque<SSDAnnotation>() {{
 											   			for(SSDAnnotation a : call.getAnnotations())
-											   				add(a);
+											   				push(a);
 											   		}}) ?
 					                         "" : // Just do not add any prefix
 										 	(namespace + CHAR_NAME_DELIMITER)) +
@@ -140,7 +139,7 @@ public class SSDFunctionCall extends SSDObject {
 	}
 	
 	@Override
-	SSDValue getValue() {
+	public SSDValue getValue() {
 		Object[] vals = invoke();
 		return vals != null ? new SSDValue(vals.length == 1 ?
 		                                   		vals[0] :
@@ -149,26 +148,8 @@ public class SSDFunctionCall extends SSDObject {
 	}
 	
 	@Override
-	SSDValue getFormattedValue() {
+	public SSDValue getFormattedValue() {
 		return getValue();
-	}
-	
-	// Special method for getting formatted value of function output
-	// with each line prefixed with the specific amount of tabs.
-	SSDValue getFormattedValue(int depth) {
-		SSDValue value = getValue();
-		if(value != null) {
-			StringBuilder sb = new StringBuilder();
-			value.stringValue().chars().forEach((c) -> {
-				sb.append((char) c);
-				if(c == CHAR_NEWLINE) {
-					for(int i = depth; --i >= 0;)
-						sb.append(CHAR_TAB);
-				}
-			});
-			return new SSDValue(sb.toString());
-		}
-		return null;
 	}
 	
 	public boolean booleanValue() 				 { return getValue().booleanValue(); }
@@ -196,7 +177,7 @@ public class SSDFunctionCall extends SSDObject {
 			for(Object value : invoke()) {
 				if((value instanceof SSDCollection)) {
 					SSDCollection coll = (SSDCollection) value;
-					buffer.append(coll.toString(depth+2,
+					buffer.append(coll.toString(depth,
 					                            compress,
 					                            json,
 					                            invoke,
