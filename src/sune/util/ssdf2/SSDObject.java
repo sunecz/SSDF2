@@ -15,8 +15,10 @@ import static sune.util.ssdf2.SSDF.WORD_VARIABLE_VALUE;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 public class SSDObject implements SSDNode {
 	
@@ -31,7 +33,7 @@ public class SSDObject implements SSDNode {
 	private final SSDValue fvalue;
 	
 	// Annotations
-	private final List<SSDAnnotation> annotations;
+	private final Set<SSDAnnotation> annotations;
 	
 	SSDObject(SSDNode parent, String name, String value) {
 		SSDType type  = SSDType.recognize(value);
@@ -44,7 +46,7 @@ public class SSDObject implements SSDNode {
 		this.value	= val;
 		this.fvalue = fval;
 		// Annotations
-		this.annotations = new ArrayList<>();
+		this.annotations = new LinkedHashSet<>();
 	}
 	
 	SSDObject(SSDNode parent, String name, SSDType type, SSDValue value, SSDValue fvalue) {
@@ -55,7 +57,7 @@ public class SSDObject implements SSDNode {
 		this.value 	= value;
 		this.fvalue = fvalue;
 		// Annotations
-		this.annotations = new ArrayList<>();
+		this.annotations = new LinkedHashSet<>();
 	}
 	
 	static final void checkArgs(String name, SSDType type, SSDValue value) {
@@ -101,7 +103,7 @@ public class SSDObject implements SSDNode {
 											: WORD_NULL);
 	}
 	
-	void addAnnotations0(List<SSDAnnotation> anns) {
+	void addAnnotations0(Set<SSDAnnotation> anns) {
 		if((anns != null)) {
 			for(SSDAnnotation a : anns) {
 				a.parent.set(this);
@@ -140,11 +142,11 @@ public class SSDObject implements SSDNode {
 		return type;
 	}
 	
-	SSDValue getValue() {
+	public SSDValue getValue() {
 		return value;
 	}
 	
-	SSDValue getFormattedValue() {
+	public SSDValue getFormattedValue() {
 		return fvalue;
 	}
 	
@@ -278,142 +280,128 @@ public class SSDObject implements SSDNode {
 	}
 	
 	String toString(int depth, boolean compress, boolean json, boolean invoke) {
-		if(invoke && this instanceof SSDFunctionCall) {
-			SSDFunctionCall func  = (SSDFunctionCall) this;
-			SSDValue 		value = compress ? func.getValue()
-			         		                 : func.getFormattedValue(depth);
-			String			sval  = value != null ? value.toString()
-			      			                      : WORD_NULL;
-			if(compress) {
-				// There is no compress option, use SSDF compress function
-				sval = new String(compress(sval));
-			}
-			// Add the compressed function value
-			return sval;
-		} else {
-			if((value == null)) return WORD_NULL;
-			String sval = value.toString();
-			if(invoke && getType() == SSDType.STRING_VAR) {
-				StringBuilder sb = new StringBuilder();
-				StringBuilder tm = new StringBuilder();
-				StringBuilder vr = new StringBuilder();
-				// Quotes
-				boolean indq = false;
-				boolean insq = false;
-				// Escaping
-				boolean escaped = false;
-				int 	escape  = 0;
-				// Miscellaneous
-				boolean var = false;
-				boolean add = false;
-				// Replace variables with actual values
-				char[] chars = sval.toCharArray();
-				for(int i = 0, l = chars.length, c; i < l; ++i) {
-					add = true;
-					c   = chars[i];
-					// Escape logic
-					if(escaped && --escape == 0) 	 escaped = false;
-					if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
-					// Quotes logic
-					if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) { indq = !indq; add = false; } else
-					if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) { insq = !insq; add = false; } else
-					// Checking logic
-					if(!indq && !insq) {
-						if((var)) {
-							// Check if variable name is present and valid?
-							if((Character.isLetterOrDigit(c))
-									|| c == '_'
-									|| c == '.') {
-								tm.append((char) c);
-								add = false;
-							} else {
-								String name = tm.toString();
-								String vval = getValueByVarName(name, compress);
-								tm.setLength(0);
-								vr.append(vval);
-								var = false;
-							}
-						}
-						if((c == CHAR_VARIABLE_SIGN)) {
-							var = true;
+		if((value == null)) return WORD_NULL;
+		String sval = value.toString();
+		if(invoke && getType() == SSDType.STRING_VAR) {
+			StringBuilder sb = new StringBuilder();
+			StringBuilder tm = new StringBuilder();
+			StringBuilder vr = new StringBuilder();
+			// Quotes
+			boolean indq = false;
+			boolean insq = false;
+			// Escaping
+			boolean escaped = false;
+			int 	escape  = 0;
+			// Miscellaneous
+			boolean var = false;
+			boolean add = false;
+			// Replace variables with actual values
+			char[] chars = sval.toCharArray();
+			for(int i = 0, l = chars.length, c; i < l; ++i) {
+				add = true;
+				c   = chars[i];
+				// Escape logic
+				if(escaped && --escape == 0) 	 escaped = false;
+				if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+				// Quotes logic
+				if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) { indq = !indq; add = false; } else
+				if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) { insq = !insq; add = false; } else
+				// Checking logic
+				if(!indq && !insq) {
+					if((var)) {
+						// Check if variable name is present and valid?
+						if((Character.isLetterOrDigit(c))
+								|| c == '_'
+								|| c == '.') {
+							tm.append((char) c);
 							add = false;
-						} else if((c == CHAR_VARIABLE_CONCAT)) {
-							sb.append(vr.toString());
-							vr.setLength(0);
-							add = false;
+						} else {
+							String name = tm.toString();
+							String vval = getValueByVarName(name, compress);
+							tm.setLength(0);
+							vr.append(vval);
+							var = false;
 						}
 					}
-					if(add) sb.append((char) c);
-				}
-				if((tm.length() > 0)) {
-					String name = tm.toString();
-					String vval = getValueByVarName(name, compress);
-					tm.setLength(0);
-					vr.append(vval);
-				}
-				if((vr.length() > 0)) {
-					sb.append(vr.toString());
-					vr.setLength(0);
-				}
-				sb.insert(0, CHAR_DOUBLE_QUOTES);
-				sb.append(CHAR_DOUBLE_QUOTES);
-				return sb.toString();
-			}
-			if(!compress) {
-				StringBuilder sb = new StringBuilder();
-				// Quotes
-				boolean indq = false;
-				boolean insq = false;
-				// Escaping
-				boolean escaped = false;
-				int 	escape  = 0;
-				// Miscellaneous
-				boolean add = false;
-				boolean con = false;
-				boolean spc = false;
-				// Beautify the object's content
-				char[] chars = sval.toCharArray();
-				for(int i = 0, l = chars.length, c; i < l; ++i) {
-					add = true;
-					c   = chars[i];
-					// Escape logic
-					if(escaped && --escape == 0) 	 escaped = false;
-					if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
-					// Quotes logic
-					if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
-					if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
-					// Checking logic
-					if(!indq && !insq) {
-						if((c == CHAR_SPACE)) {
-							if((spc))
-								add = false;
-							spc = true;
-						} else if((c == CHAR_VARIABLE_CONCAT)) {
-							if(!spc)
-								sb.append(CHAR_SPACE);
-							con = true;
-							spc = false;
-						}
-					} else {
-						spc = false;
-						con = false;
-					}
-					if(add) sb.append((char) c);
-					if((con && !spc)) {
-						sb.append(CHAR_SPACE);
-						con = false;
-						spc = true;
+					if((c == CHAR_VARIABLE_SIGN)) {
+						var = true;
+						add = false;
+					} else if((c == CHAR_VARIABLE_CONCAT)) {
+						sb.append(vr.toString());
+						vr.setLength(0);
+						add = false;
 					}
 				}
-				sval = sb.toString();
+				if(add) sb.append((char) c);
 			}
-			if(json && (type == SSDType.STRING_VAR ||
-						type == SSDType.UNKNOWN)) {
-				sval = sval.replaceAll("\"", "\\\\\"");
-				sval = CHAR_DOUBLE_QUOTES + sval + CHAR_DOUBLE_QUOTES;
+			if((tm.length() > 0)) {
+				String name = tm.toString();
+				String vval = getValueByVarName(name, compress);
+				tm.setLength(0);
+				vr.append(vval);
 			}
-			return sval;
+			if((vr.length() > 0)) {
+				sb.append(vr.toString());
+				vr.setLength(0);
+			}
+			sb.insert(0, CHAR_DOUBLE_QUOTES);
+			sb.append(CHAR_DOUBLE_QUOTES);
+			return sb.toString();
 		}
+		if(!compress) {
+			StringBuilder sb = new StringBuilder();
+			// Quotes
+			boolean indq = false;
+			boolean insq = false;
+			// Escaping
+			boolean escaped = false;
+			int 	escape  = 0;
+			// Miscellaneous
+			boolean add = false;
+			boolean con = false;
+			boolean spc = false;
+			// Beautify the object's content
+			char[] chars = sval.toCharArray();
+			for(int i = 0, l = chars.length, c; i < l; ++i) {
+				add = true;
+				c   = chars[i];
+				// Escape logic
+				if(escaped && --escape == 0) 	 escaped = false;
+				if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+				// Quotes logic
+				if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
+				if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
+				// Checking logic
+				if(!indq && !insq) {
+					if((c == CHAR_SPACE)) {
+						if((spc))
+							add = false;
+						spc = true;
+					} else if((c == CHAR_VARIABLE_CONCAT)) {
+						if(!spc)
+							sb.append(CHAR_SPACE);
+						con = true;
+						spc = false;
+					}
+				} else {
+					spc = false;
+					con = false;
+				}
+				if(add) sb.append((char) c);
+				if((con && !spc)) {
+					sb.append(CHAR_SPACE);
+					con = false;
+					spc = true;
+				}
+			}
+			sval = sb.toString();
+		}
+		if(json && (type == SSDType.STRING_VAR ||
+					type == SSDType.UNKNOWN)) {
+			sval = sval.replaceAll("\"", "\\\\\"");
+			sval = CHAR_DOUBLE_QUOTES + sval + CHAR_DOUBLE_QUOTES;
+		}
+		return sval;
 	}
 	
 	@Override
@@ -429,5 +417,30 @@ public class SSDObject implements SSDNode {
 	@Override
 	public String toString(boolean compress, boolean invoke) {
 		return toString(0, compress, false, invoke);
+	}
+	
+	@Override
+	public String toString(int depth, boolean compress, boolean invoke) {
+		return toString(depth, compress, false, invoke);
+	}
+	
+	@Override
+	public String toJSON() {
+		return toString(0, false, true, false);
+	}
+	
+	@Override
+	public String toJSON(boolean compress) {
+		return toString(0, compress, true, false);
+	}
+	
+	@Override
+	public String toJSON(boolean compress, boolean invoke) {
+		return toString(0, compress, true, invoke);
+	}
+	
+	@Override
+	public String toJSON(int depth, boolean compress, boolean invoke) {
+		return toString(depth, compress, true, invoke);
 	}
 }

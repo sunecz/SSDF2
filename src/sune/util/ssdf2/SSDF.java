@@ -9,11 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import sune.util.ssdf2.SSDCollection.SSDCollectionType;
@@ -79,10 +75,10 @@ public final class SSDF {
 		boolean escaped = false;
 		// Current escape strength
 		int	escape		= 0;
-		// Whether the annotation sign was encountered
-		boolean sann 	= false;
-		// Whether the annotation bracket was encountered
-		boolean bann	= false;
+		// If annotation sign is encountered, true is added
+		Deque<Boolean> sann = new ArrayDeque<Boolean>();
+		// If annotation bracket and sign is encountered, true is added
+		Deque<Boolean> iann = new ArrayDeque<Boolean>();
 		StringBuilder sb = new StringBuilder();
 		for(int i = 0, l = chars.length, c; i < l; ++i) {
 			cadd = true;
@@ -95,13 +91,22 @@ public final class SSDF {
 			if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
 			// Formatting logic
 			if(!indq && !insq) {
-				if(c == CHAR_ANNOTATION_SIGN) 	    		sann = true;
-				if(c == CHAR_ANNOTATION_OB && sann) 		bann = true;
-				if(c == CHAR_ANNOTATION_CB && sann && bann) sann = bann = false;
-				boolean ws = Character.isWhitespace(c);
-				if(ws) {
-					if((sann && !bann)) {
-						sann = false;
+				if((c == CHAR_ANNOTATION_SIGN)) {
+					sann.push(true);
+				} else if((c == CHAR_ANNOTATION_OB && sann.peek())) {
+					iann.push(true);
+				} else if((c == CHAR_ANNOTATION_CB && iann.peek())) {
+					if((iann.peek())) {
+						iann.pop();
+						if(!sann.isEmpty())
+							sann.pop();
+					}
+				} else if((Character.isWhitespace(c))) {
+					if((!sann.isEmpty()
+							&& sann.peek()
+							// The last annotation has no attributes
+							&& sann.size() != iann.size())) {
+						sann.pop();
 						if((c != CHAR_SPACE))
 							c  = CHAR_SPACE;
 					} else cadd = false;
@@ -131,6 +136,7 @@ public final class SSDF {
 		StringBuilder temp = new StringBuilder();
 		String tempName    = null;
 		String lastName	   = null;
+		String lobjName	   = null;
 		// Counter for array objects
 		int counter 	   = 0;
 		// Determining if a character can be added
@@ -139,24 +145,25 @@ public final class SSDF {
 		boolean escaped	   = false;
 		// Current escape strength
 		int	escape		   = 0;
-		// Current annotations that should be used
-		int annc		   = 0;
 		// Whether the annotation sign was encountered
 		boolean bann 	   = false;
 		// Whether the value should be defined now
 		boolean isval 	   = false;
 		// Annotations for current object/collection
-		Map<Integer, List<SSDAnnotation>> anns = new LinkedHashMap<>();
-		// Functional node, holds array, or annotation, or function call 
+		Deque<SSDAnnotation> anns = new ArrayDeque<>();
+		// Holds all parents, the first element represents the current parent
+		// which will be later saved into the 'parent' variable
 		Deque<SSDNode> parents = new ArrayDeque<>();
 		// Objects for handling information about parent
 		SSDNode parent 	   = null;
 		boolean array 	   = false;
-		boolean annotation = false;
 		boolean function   = false;
 		boolean isfsimple  = false;
-		boolean	infsimple  = false;
 		int		ctfsimple  = 0;
+		Deque<Boolean> annsval = new ArrayDeque<>();
+		Deque<Integer> annscnt = new ArrayDeque<>();
+		annsval.push(false);
+		annscnt.push(0);
 		// Read the characters and construct the map
 		for(int i = off, l = off + len, c; i < l; ++i) {
 			cadd = true;
@@ -176,14 +183,8 @@ public final class SSDF {
 					if((isfsimple)) {
 						if(c == CHAR_FUNCCALL_OB) ++ctfsimple; else
 						if(c == CHAR_FUNCCALL_CB) --ctfsimple;
-						if((ctfsimple > 0)) {
-							infsimple = true;
-							cadd 	  = true;
-						} else {
-							infsimple = false;
-						}
-					}
-					if(!infsimple) {
+						if(ctfsimple > 0) 		  cadd = true;
+					} else {
 						if(// Objects and arrays
 						   (c == CHAR_OBJECT_OB ||
 						    c == CHAR_ARRAY_OB) ||
@@ -198,34 +199,38 @@ public final class SSDF {
 								tempName = temp.toString();
 								// Clear the temporary string
 								temp.setLength(0);
-								// Add the annotation to the annotations list
-								List<SSDAnnotation> mann;
-								if((mann = anns.get(annc)) == null) {
-									mann = new ArrayList<>();
-									anns.put(annc, mann);
-								}
 								// Create the annoation object first
 								SSDAnnotation annObj = new SSDAnnotation(tempName);
+								// Add the annotation object
+								anns.push(annObj);
 								// If the annotation has some items
 								if(!(bann && c == CHAR_SPACE)) {
 									// Add the annotation object to the parents
 									parents.push(annObj);
 									// Set the current parent
-									parent 	   = annObj;
-									array 	   = false;
-									annotation = true;
-									function   = false;
+									parent = annObj;
+									array  = false;
+									annsval.push(true);
+									annscnt.push(anns.size());
 								}
-								// Add the annotation object
-								mann.add(annObj);
 								bann 	 = false;
 								tempName = null;
 							}
 							// Current object is a function call
 							else if((c == CHAR_FUNCCALL_OB && isval)) {
 								// Check the function call's name first
-								if((tempName == null && array))
-									tempName = Integer.toString(counter++);
+								if((tempName == null)) {
+									if((array || function)) {
+										tempName = Integer.toString(counter++);
+									} else if((lobjName != null)) {
+										tempName = lobjName;
+										lobjName = null; // Only one use
+									} else if((annsval.peek())) {
+										tempName = WORD_ANNOTATION_DEFAULT;
+									} else {
+										tempName = lastName;
+									}
+								}
 								// Get the function call's name
 								String funcName = temp.toString();
 								// Clear the temporary string
@@ -235,22 +240,25 @@ public final class SSDF {
 								// Add the function call to the parents
 								parents.push(fc);
 								// Set the current parent
-								parent 	   = fc;
-								array 	   = true;
-								annotation = false;
-								function   = true;
-								isfsimple  = func_isContentSimple(funcName, anns.get(annc));
+								parent 	  = fc;
+								array 	  = true;
+								function  = true;
+								isfsimple = func_isContentSimple(funcName, anns);
 								if(isfsimple) ctfsimple = 1;
 							}
 							// Current object is an array or an object
 							else {
-								if((array)) {
-									if((tempName == null))
+								if((tempName == null)) {
+									if((array || function)) {
 										tempName = Integer.toString(counter++);
-								} else {
-									if((tempName == null
-											&& lastName != null))
+									} else if((lobjName != null)) {
+										tempName = lobjName;
+										lobjName = null; // Only one use
+									} else if((annsval.peek())) {
+										tempName = WORD_ANNOTATION_DEFAULT;
+									} else {
 										tempName = lastName;
+									}
 								}
 								boolean isarr = c == CHAR_ARRAY_OB;
 								// Create a new collection with the given name
@@ -264,20 +272,18 @@ public final class SSDF {
 								}
 								// Add the object to the parents
 								parents.push(arr);
-								if(!annotation) {
+								if(!anns.isEmpty()) {
 									// Add all the gotten annotations
-									List<SSDAnnotation> mann;
-									if((mann = anns.get(annc)) != null) {
-										arr .addAnnotations0(mann);
-										anns.remove(annc--);
-									}
+									int ai = annsval.peek()
+												? anns.size() - annscnt.peek()
+												: anns.size();
+									while(--ai >= 0)
+										arr.addAnnotation0(anns.pop());
 								}
 								addToParent(parent, tempName, arr);
 								// Set the current parent
-								parent 	   = arr;
-								array 	   = isarr;
-								annotation = false;
-								function   = false;
+								parent 	 = arr;
+								array 	 = isarr;
 								// Reset the temporary name
 								tempName = null;
 							}
@@ -285,37 +291,47 @@ public final class SSDF {
 						// Item name delimiter or annotation sign
 						else if((c == CHAR_NV_DELIMITER    ||
 								 c == CHAR_ANNOTATION_SIGN ||
-								 (annotation &&
+								 (annsval.peek() &&
 									c == CHAR_ANNOTATION_NV_DELIMITER))) {
-							bann 	 = c == CHAR_ANNOTATION_SIGN;
-							isval	 = c != CHAR_ANNOTATION_SIGN || array;
+							if((c == CHAR_ANNOTATION_SIGN && isval))
+								lobjName = tempName;
 							tempName = temp.toString();
-							if(!annotation
+							bann  	 = c == CHAR_ANNOTATION_SIGN;
+							isval 	 = c != CHAR_ANNOTATION_SIGN || array;
+							if(!annsval.peek()
 									&& !tempName.isEmpty())
 								lastName = tempName;
 							temp.setLength(0);
 						}
 						// Item delimiter
 						else if((c == CHAR_ITEM_DELIMITER ||
-								(annotation &&
+								(annsval.peek() &&
 									c == CHAR_ANNOTATION_ITEM_DELIMITER) ||
 								(function &&
 									c == CHAR_FUNCCALL_ARGS_DELIMITER))) {
 							String value;
 							if(!(value = temp.toString()).isEmpty()) {
-								if((tempName == null && (array || function)))
-									tempName = Integer.toString(counter++);
-								if((tempName == null && annotation))
-									tempName = WORD_ANNOTATION_DEFAULT;
+								if((tempName == null)) {
+									if((array || function)) {
+										tempName = Integer.toString(counter++);
+									} else if((lobjName != null)) {
+										tempName = lobjName;
+										lobjName = null; // Only one use
+									} else if((annsval.peek())) {
+										tempName = WORD_ANNOTATION_DEFAULT;
+									} else {
+										tempName = lastName;
+									}
+								}
 								if((tempName != null)) {
 									SSDObject obj = new SSDObject(parent, tempName, value);
-									if(!annotation) {
+									if(!anns.isEmpty()) {
 										// Add all the gotten annotations
-										List<SSDAnnotation> mann;
-										if((mann = anns.get(annc)) != null) {
-											obj .addAnnotations0(mann);
-											anns.remove(annc--);
-										}
+										int ai = annsval.peek()
+													? anns.size() - annscnt.peek()
+													: anns.size();
+										while(--ai >= 0)
+											obj.addAnnotation0(anns.pop());
 									}
 									addToParent(parent, tempName, obj);
 									temp.setLength(0);
@@ -323,7 +339,6 @@ public final class SSDF {
 								}
 							}
 							isval = array;
-							if(!annotation) ++annc;
 						}
 						// Closing brackets
 						else if(c == CHAR_OBJECT_CB 	||
@@ -333,19 +348,27 @@ public final class SSDF {
 							// Add last item in an object, or an array, if needed
 							String value;
 							if(!(value = temp.toString()).isEmpty()) {
-								if((tempName == null && (array || function)))
-									tempName = Integer.toString(counter++);
-								if((tempName == null && annotation))
-									tempName = WORD_ANNOTATION_DEFAULT;
+								if((tempName == null)) {
+									if((array || function)) {
+										tempName = Integer.toString(counter++);
+									} else if((lobjName != null)) {
+										tempName = lobjName;
+										lobjName = null; // Only one use
+									} else if((annsval.peek())) {
+										tempName = WORD_ANNOTATION_DEFAULT;
+									} else {
+										tempName = lastName;
+									}
+								}
 								if((tempName != null)) {
 									SSDObject obj = new SSDObject(parent, tempName, value);
-									if(!annotation) {
+									if(!anns.isEmpty()) {
 										// Add all the gotten annotations
-										List<SSDAnnotation> mann;
-										if((mann = anns.get(annc)) != null) {
-											obj .addAnnotations0(mann);
-											anns.remove(annc--);
-										}
+										int ai = annsval.peek()
+													? anns.size() - annscnt.peek()
+													: anns.size();
+										while(--ai >= 0)
+											obj.addAnnotation0(anns.pop());
 									}
 									addToParent(parent, tempName, obj);
 									temp.setLength(0);
@@ -353,7 +376,6 @@ public final class SSDF {
 								}
 							}
 							isval = array;
-							if(!annotation) ++annc;
 							// Do not add this character
 							cadd = false;
 							// Remove the currently used parent
@@ -362,15 +384,8 @@ public final class SSDF {
 								// The main object was removed
 								if((parents.isEmpty()
 										&& par.getName() == null)) {
-									SSDCollection main = (SSDCollection) par;
-									// Add all the gotten annotations
-									List<SSDAnnotation> mann;
-									if((mann = anns.get(annc)) != null) {
-										main.addAnnotations0(mann);
-										anns.remove(annc--);
-									}
 									// Return the main object
-									return main;
+									return (SSDCollection) par;
 								}
 								// Add the constructed function
 								else if((function)) {
@@ -381,10 +396,17 @@ public final class SSDF {
 								}
 							}
 							// Set the current parent
-							parent 	   = parents.peek();
-							array 	   = isParentArray(parent);
-							annotation = isParentAnnotation(parent);
-							function   = isParentFunctionCall(parent);
+							parent = parents.peek();
+							array  = isParentArray(parent);
+							if((function)) {
+								if((c == CHAR_FUNCCALL_CB))
+									function = false;
+							} else {
+								if((annsval.peek() && c == CHAR_ANNOTATION_CB)) {
+									annsval.pop();
+									annscnt.pop();
+								}
+							}
 						}
 						// All other characters should be added
 						else cadd = true;
@@ -420,16 +442,6 @@ public final class SSDF {
 			}
 		}
 		return false;
-	}
-	
-	static final boolean isParentAnnotation(SSDNode parent) {
-		// Null check is redundant
-		return parent instanceof SSDAnnotation;
-	}
-	
-	static final boolean isParentFunctionCall(SSDNode parent) {
-		// Null check is redundant
-		return parent instanceof SSDFunctionCall;
 	}
 	
 	static final Charset CHARSET = Charset.forName("UTF-8");
@@ -495,7 +507,7 @@ public final class SSDF {
 	}
 	
 	static final String FUNC_CONTENT_SIMPLE = "CONTENT_SIMPLE";
-	static final boolean func_isContentSimple(String funcName, List<SSDAnnotation> anns) {
+	static final boolean func_isContentSimple(String funcName, Deque<SSDAnnotation> anns) {
 		try {
 			String namespace;
 			String[] split = funcName.split("\\" + CHAR_NAME_DELIMITER);

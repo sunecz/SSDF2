@@ -35,7 +35,8 @@ public class SSDAnnotation extends SSDCollection {
 		// Do nothing
 	}
 	
-	String toString(int depth, boolean compress, boolean invoke) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke) {
+		if(json) return ""; // Annotations don't exist in JSON
 		StringBuilder buffer = new StringBuilder();
 		buffer.append(CHAR_ANNOTATION_SIGN);
 		buffer.append(getName());
@@ -51,6 +52,18 @@ public class SSDAnnotation extends SSDCollection {
 					if(!compress)
 						buffer.append(CHAR_SPACE);
 				}
+				// Append all node's annotations
+				if(!json && node.isObject()) {
+					SSDAnnotation[] anns;
+					if((anns = node.getAnnotations()).length > 0) {
+						for(SSDAnnotation ann : anns) {
+							buffer.append(json ? ann.toJSON(depth, compress, invoke)
+							                   : ann.toString(depth, compress, invoke));
+							if((ann.objects().isEmpty()) || !compress)
+								buffer.append(CHAR_SPACE);
+						}
+					}
+				}
 				String nodeName;
 				if(!(nodeName = node.getName())
 							.equals(WORD_ANNOTATION_DEFAULT)
@@ -60,7 +73,8 @@ public class SSDAnnotation extends SSDCollection {
 					buffer.append(CHAR_ANNOTATION_NV_DELIMITER);
 					if(!compress) buffer.append(CHAR_SPACE);
 				}
-				buffer.append(node.toString(compress, invoke));
+				// No need to check for JSON
+				buffer.append(node.toString(depth+1, compress, invoke));
 			}
 			buffer.append(CHAR_ANNOTATION_CB);
 		} else if(compress) buffer.append(CHAR_SPACE);
@@ -69,16 +83,41 @@ public class SSDAnnotation extends SSDCollection {
 	
 	@Override
 	public String toString() {
-		return toString(0, false, false);
+		return toString(0, false, false, false);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(0, compress, false);
+		return toString(0, compress, false, false);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(0, compress, invoke);
+		return toString(0, compress, false, invoke);
+	}
+	
+	@Override
+	public String toString(int depth, boolean compress, boolean invoke) {
+		return toString(depth, compress, false, invoke);
+	}
+	
+	@Override
+	public String toJSON() {
+		return toString(0, false, true, false);
+	}
+	
+	@Override
+	public String toJSON(boolean compress) {
+		return toString(0, compress, true, false);
+	}
+	
+	@Override
+	public String toJSON(boolean compress, boolean invoke) {
+		return toString(0, compress, true, invoke);
+	}
+	
+	@Override
+	public String toJSON(int depth, boolean compress, boolean invoke) {
+		return toString(depth, compress, true, invoke);
 	}
 }
