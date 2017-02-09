@@ -5,6 +5,7 @@ import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_ITEM_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_NV_DELIMITER;
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_OB;
 import static sune.util.ssdf2.SSDF.CHAR_ANNOTATION_SIGN;
+import static sune.util.ssdf2.SSDF.CHAR_NEWLINE;
 import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 
@@ -35,9 +36,25 @@ public class SSDAnnotation extends SSDCollection {
 		// Do nothing
 	}
 	
-	String toString(int depth, boolean compress, boolean json, boolean invoke) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke,
+			boolean info, boolean comments) {
 		if(json) return ""; // Annotations don't exist in JSON
 		StringBuilder buffer = new StringBuilder();
+		// Append all comments
+		if((comments && !json)) {
+			SSDComment[] cmts;
+			if((cmts = getComments()).length > 0) {
+				boolean cmtf = true;
+				for(SSDComment cmt : cmts) {
+					if(cmtf) cmtf = false; else
+					if(!compress) buffer.append(CHAR_NEWLINE);
+					buffer.append(cmt.toString(depth, compress));
+				}
+				if(!compress) {
+					buffer.append(CHAR_NEWLINE);
+				}
+			}
+		}
 		buffer.append(CHAR_ANNOTATION_SIGN);
 		buffer.append(getName());
 		Collection<SSDNode> nodes;
@@ -58,7 +75,7 @@ public class SSDAnnotation extends SSDCollection {
 					if((anns = node.getAnnotations()).length > 0) {
 						for(SSDAnnotation ann : anns) {
 							buffer.append(json ? ann.toJSON(depth, compress, invoke)
-							                   : ann.toString(depth, compress, invoke));
+							                   : ann.toString(depth, compress, invoke, comments));
 							if((ann.objects().isEmpty()) || !compress)
 								buffer.append(CHAR_SPACE);
 						}
@@ -74,7 +91,7 @@ public class SSDAnnotation extends SSDCollection {
 					if(!compress) buffer.append(CHAR_SPACE);
 				}
 				// No need to check for JSON
-				buffer.append(node.toString(depth+1, compress, invoke));
+				buffer.append(node.toString(depth+1, compress, invoke, comments));
 			}
 			buffer.append(CHAR_ANNOTATION_CB);
 		} else if(compress) buffer.append(CHAR_SPACE);
@@ -83,41 +100,51 @@ public class SSDAnnotation extends SSDCollection {
 	
 	@Override
 	public String toString() {
-		return toString(0, false, false, false);
+		return toString(0, false, false, false, true, true);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(0, compress, false, false);
+		return toString(0, compress, false, false, true, true);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(0, compress, false, invoke);
+		return toString(0, compress, false, invoke, true, true);
+	}
+	
+	@Override
+	public String toString(boolean compress, boolean invoke, boolean comments) {
+		return toString(0, compress, false, invoke, true, comments);
 	}
 	
 	@Override
 	public String toString(int depth, boolean compress, boolean invoke) {
-		return toString(depth, compress, false, invoke);
+		return toString(depth, compress, false, invoke, true, true);
+	}
+	
+	@Override
+	public String toString(int depth, boolean compress, boolean invoke, boolean comments) {
+		return toString(depth, compress, false, invoke, true, comments);
 	}
 	
 	@Override
 	public String toJSON() {
-		return toString(0, false, true, false);
+		return toString(0, false, true, false, false, false);
 	}
 	
 	@Override
 	public String toJSON(boolean compress) {
-		return toString(0, compress, true, false);
+		return toString(0, compress, true, false, false, false);
 	}
 	
 	@Override
 	public String toJSON(boolean compress, boolean invoke) {
-		return toString(0, compress, true, invoke);
+		return toString(0, compress, true, invoke, false, false);
 	}
 	
 	@Override
 	public String toJSON(int depth, boolean compress, boolean invoke) {
-		return toString(depth, compress, true, invoke);
+		return toString(depth, compress, true, invoke, false, false);
 	}
 }

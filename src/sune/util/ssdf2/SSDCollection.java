@@ -40,6 +40,9 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	// Annotations
 	private final Set<SSDAnnotation> annotations;
 	
+	// Comments
+	private final Set<SSDComment> comments;
+	
 	SSDCollection(SSDNode parent, String name, boolean isArray) {
 		this(parent, name, isArray, new LinkedHashMap<>(), new LinkedHashSet<>());
 	}
@@ -56,6 +59,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		if((annotations == null))
 			annotations = new LinkedHashSet<>();
 		this.annotations = annotations;
+		// Comments
+		this.comments = new LinkedHashSet<>();
 	}
 	
 	// Method for creating the main parent (object) of the data structure
@@ -68,6 +73,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
   		this.objects = objects;
   		// Annotations
   		this.annotations = new LinkedHashSet<>();
+  		// Comments
+  		this.comments = new LinkedHashSet<>();
   	}
 	
 	static final void checkArgs(SSDNode parent, String name, Map<String, SSDNode> objects,
@@ -984,6 +991,21 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return list.toArray(new SSDAnnotation[list.size()]);
 	}
 	
+	@Override
+	public void addComment(SSDComment comment) {
+		comments.add(comment);
+	}
+	
+	@Override
+	public void removeComment(SSDComment comment) {
+		comments.remove(comment);
+	}
+	
+	@Override
+	public SSDComment[] getComments() {
+		return comments.toArray(new SSDComment[comments.size()]);
+	}
+	
 	public SSDCollection copy() {
 		return new SSDCollection(getParent(), getName(), isArray,
 			new LinkedHashMap<>(objects), new LinkedHashSet<>(annotations));
@@ -1009,7 +1031,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return sb.toString();
 	}
 	
-	String toString(int depth, boolean compress, boolean json, boolean invoke, boolean info) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke,
+			boolean info, boolean comments) {
 		String 		  tabStr = tabString(depth);
 		String		  ndtStr = tabStr + CHAR_TAB;
 		StringBuilder buffer = new StringBuilder();
@@ -1020,7 +1043,20 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 				if(annf) 	  annf = false; else
 				if(!compress) buffer.append(CHAR_NEWLINE);
 				buffer.append(json ? ann.toJSON(depth, compress, invoke)
-				                   : ann.toString(depth, compress, invoke));
+				                   : ann.toString(depth, compress, invoke, comments));
+			}
+			if(!compress) {
+				buffer.append(CHAR_NEWLINE);
+				buffer.append(tabStr);
+			}
+		}
+		// Append all comments
+		if((comments && !this.comments.isEmpty() && !json)) {
+			boolean cmtf = true;
+			for(SSDComment cmt : this.comments) {
+				if(cmtf) cmtf = false; else
+				if(!compress) buffer.append(CHAR_NEWLINE);
+				buffer.append(cmt.toString(0, compress));
 			}
 			if(!compress) {
 				buffer.append(CHAR_NEWLINE);
@@ -1028,55 +1064,71 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			}
 		}
 		buffer.append(isArray ? CHAR_ARRAY_OB : CHAR_OBJECT_OB);
-		boolean first = true;
-		for(SSDNode node : objects.values()) {
-			if((first)) {
-				if(!compress) {
-					buffer.append(CHAR_NEWLINE);
-				}
-				first = false;
-			} else {
-				buffer.append(CHAR_ITEM_DELIMITER);
-				if(!compress) {
-					buffer.append(CHAR_NEWLINE);
-				}
-			}
-			// Append all node's annotations
-			if(!json) {
-				SSDAnnotation[] anns;
-				if((anns = node.getAnnotations()).length > 0) {
-					boolean annf = true;
-					for(SSDAnnotation ann : anns) {
-						if(annf) 	  annf = false; else
-						if(!compress) buffer.append(CHAR_NEWLINE);
-						if(!compress) buffer.append(ndtStr);
-						buffer.append(json ? ann.toJSON(depth, compress, invoke)
-						                   : ann.toString(depth, compress, invoke));
+		Collection<SSDNode> values;
+		if(!(values = objects.values()).isEmpty()) {
+			boolean first = true;
+			for(SSDNode node : values) {
+				if((first)) {
+					if(!compress) {
+						buffer.append(CHAR_NEWLINE);
 					}
-					if(!compress) buffer.append(CHAR_NEWLINE);
+					first = false;
+				} else {
+					buffer.append(CHAR_ITEM_DELIMITER);
+					if(!compress) {
+						buffer.append(CHAR_NEWLINE);
+					}
+				}
+				// Append all node's annotations
+				if(!json) {
+					SSDAnnotation[] anns;
+					if((anns = node.getAnnotations()).length > 0) {
+						boolean annf = true;
+						for(SSDAnnotation ann : anns) {
+							if(annf) 	  annf = false; else
+							if(!compress) buffer.append(CHAR_NEWLINE);
+							if(!compress) buffer.append(ndtStr);
+							buffer.append(json ? ann.toJSON(depth, compress, invoke)
+							                   : ann.toString(depth, compress, invoke, comments));
+						}
+						if(!compress) buffer.append(CHAR_NEWLINE);
+					}
+				}
+				// Append all node's comments
+				if((comments && !json && !node.isCollection())) {
+					SSDComment[] cmts;
+					if((cmts = node.getComments()).length > 0) {
+						boolean cmtf = true;
+						for(SSDComment cmt : cmts) {
+							if(cmtf) cmtf = false; else
+							if(!compress) buffer.append(CHAR_NEWLINE);
+							buffer.append(cmt.toString(depth+1, compress));
+						}
+						if(!compress) buffer.append(CHAR_NEWLINE);
+					}
+				}
+				if(!compress) buffer.append(ndtStr);
+				if(!isArray) {
+					if(json) buffer.append(CHAR_DOUBLE_QUOTES);
+					buffer.append(node.getName());
+					if(json) buffer.append(CHAR_DOUBLE_QUOTES);
+					buffer.append(CHAR_NV_DELIMITER);
+					if(!compress) {
+						buffer.append(CHAR_SPACE);
+					}
+				}
+				if((node instanceof SSDCollection)) {
+					SSDCollection coll = (SSDCollection) node;
+					buffer.append(coll.toString(depth+1, compress, json, invoke, false, comments));
+				} else {
+					buffer.append(json ? node.toJSON(depth+1, compress, invoke)
+					                   : node.toString(depth+1, compress, invoke, comments));
 				}
 			}
-			if(!compress) buffer.append(ndtStr);
-			if(!isArray) {
-				if(json) buffer.append(CHAR_DOUBLE_QUOTES);
-				buffer.append(node.getName());
-				if(json) buffer.append(CHAR_DOUBLE_QUOTES);
-				buffer.append(CHAR_NV_DELIMITER);
-				if(!compress) {
-					buffer.append(CHAR_SPACE);
-				}
+			if(!compress) {
+				buffer.append(CHAR_NEWLINE);
+				buffer.append(tabStr);
 			}
-			if((node instanceof SSDCollection)) {
-				SSDCollection coll = (SSDCollection) node;
-				buffer.append(coll.toString(depth+1, compress, json, invoke, false));
-			} else {
-				buffer.append(json ? node.toJSON(depth+1, compress, invoke)
-				                   : node.toString(depth+1, compress, invoke));
-			}
-		}
-		if(!compress) {
-			buffer.append(CHAR_NEWLINE);
-			buffer.append(tabStr);
 		}
 		buffer.append(isArray ? CHAR_ARRAY_CB : CHAR_OBJECT_CB);
 		return buffer.toString();
@@ -1084,42 +1136,52 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	@Override
 	public String toString() {
-		return toString(0, false, false, false, true);
+		return toString(0, false, false, false, true, true);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(0, compress, false, false, true);
+		return toString(0, compress, false, false, true, true);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(0, compress, false, invoke, true);
+		return toString(0, compress, false, invoke, true, true);
+	}
+	
+	@Override
+	public String toString(boolean compress, boolean invoke, boolean comments) {
+		return toString(0, compress, false, invoke, true, comments);
 	}
 	
 	@Override
 	public String toString(int depth, boolean compress, boolean invoke) {
-		return toString(depth, compress, false, invoke, true);
+		return toString(depth, compress, false, invoke, true, true);
+	}
+	
+	@Override
+	public String toString(int depth, boolean compress, boolean invoke, boolean comments) {
+		return toString(depth, compress, false, invoke, true, comments);
 	}
 	
 	@Override
 	public String toJSON() {
-		return toString(0, false, true, false, false);
+		return toString(0, false, true, false, false, false);
 	}
 	
 	@Override
 	public String toJSON(boolean compress) {
-		return toString(0, compress, true, false, false);
+		return toString(0, compress, true, false, false, false);
 	}
 	
 	@Override
 	public String toJSON(boolean compress, boolean invoke) {
-		return toString(0, compress, true, invoke, false);
+		return toString(0, compress, true, invoke, false, false);
 	}
 	
 	@Override
 	public String toJSON(int depth, boolean compress, boolean invoke) {
-		return toString(depth, compress, true, invoke, false);
+		return toString(depth, compress, true, invoke, false, false);
 	}
 	
 	@Override
