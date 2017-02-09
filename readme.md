@@ -320,7 +320,7 @@ public class FunctionTest {
     int value = 4;
 
     public static void main(String[] args) {
-        SSDCollection coll = SSDF.read(new File("res:/test.ssdf"));
+        SSDCollection coll = SSDF.readResource("/test.ssdf");
         System.out.println(coll.toString());
     }
 }
@@ -377,7 +377,7 @@ public class FunctionTest {
     }
     
     public static void main(String[] args) {
-        SSDCollection coll = SSDF.read(new File("res:/test.ssdf"));
+        SSDCollection coll = SSDF.readResource("/test.ssdf");
         System.out.println(coll.toString(false, true));
     }
 }
@@ -439,7 +439,7 @@ import sune.util.ssdf2.SSDF;
 public class FunctionTest {
     
     public static void main(String[] args) {
-        SSDCollection coll = SSDF.read(new File("res:/test.ssdf"));
+        SSDCollection coll = SSDF.readResource("/test.ssdf");
         System.out.println(coll.toString(false, true));
     }
 }
@@ -519,6 +519,52 @@ To concatenate strings or variables `+` character can be used.
 ```
 
 `greeting` has this value: `Hello John Smith!` 
+
+## Comments
+One-line comment
+```
+{
+    // A comment
+    // Another comment
+    item: "value"
+}
+```
+
+Multiple-lines comment
+```
+{
+    /*
+        A comment
+    */
+    /* Another comment */
+    item: "value"
+}
+```
+
+### Creating a comment
+```java
+SSDComment comment = SSDComment.of("A comment");
+```
+
+### Adding a comment
+```java
+SSDNode node = ...; // Object, collection, ...
+SSDComment comment = ...; // Created comment
+node.addComment(comment);
+```
+
+### Removing a comment
+```java
+SSDNode node = ...; // Object, collection, ...
+SSDComment comment = ...; // Created comment
+node.removeComment(comment);
+```
+
+### Getting all comments at a node
+```java
+SSDNode node = ...; // Object, collection, ...
+SSDComment[] comments = node.getComments(); // All the comments
+```
 
 ## JSON
 This library can be also used for reading JSON strings from files, streams, and strings.
