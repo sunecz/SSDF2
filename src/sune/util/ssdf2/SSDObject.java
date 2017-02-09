@@ -35,6 +35,9 @@ public class SSDObject implements SSDNode {
 	// Annotations
 	private final Set<SSDAnnotation> annotations;
 	
+	// Comments
+	private final Set<SSDComment> comments;
+	
 	SSDObject(SSDNode parent, String name, String value) {
 		SSDType type  = SSDType.recognize(value);
 		SSDValue val  = new SSDValue(compress(value));
@@ -47,6 +50,8 @@ public class SSDObject implements SSDNode {
 		this.fvalue = fval;
 		// Annotations
 		this.annotations = new LinkedHashSet<>();
+		// Comments
+		this.comments = new LinkedHashSet<>();
 	}
 	
 	SSDObject(SSDNode parent, String name, SSDType type, SSDValue value, SSDValue fvalue) {
@@ -58,6 +63,8 @@ public class SSDObject implements SSDNode {
 		this.fvalue = fvalue;
 		// Annotations
 		this.annotations = new LinkedHashSet<>();
+		// Comments
+		this.comments = new LinkedHashSet<>();
 	}
 	
 	static final void checkArgs(String name, SSDType type, SSDValue value) {
@@ -203,6 +210,21 @@ public class SSDObject implements SSDNode {
 	}
 	
 	@Override
+	public void addComment(SSDComment comment) {
+		comments.add(comment);
+	}
+	
+	@Override
+	public void removeComment(SSDComment comment) {
+		comments.remove(comment);
+	}
+	
+	@Override
+	public SSDComment[] getComments() {
+		return comments.toArray(new SSDComment[comments.size()]);
+	}
+	
+	@Override
 	public boolean isObject() {
 		return true;
 	}
@@ -279,7 +301,8 @@ public class SSDObject implements SSDNode {
 		return WORD_NULL;
 	}
 	
-	String toString(int depth, boolean compress, boolean json, boolean invoke) {
+	String toString(int depth, boolean compress, boolean json, boolean invoke,
+			boolean info, boolean comments) {
 		if((value == null)) return WORD_NULL;
 		String sval = value.toString();
 		if(invoke && getType() == SSDType.STRING_VAR) {
@@ -406,41 +429,51 @@ public class SSDObject implements SSDNode {
 	
 	@Override
 	public String toString() {
-		return toString(0, false, false, false);
+		return toString(0, false, false, false, true, true);
 	}
 	
 	@Override
 	public String toString(boolean compress) {
-		return toString(0, compress, false, false);
+		return toString(0, compress, false, false, true, true);
 	}
 	
 	@Override
 	public String toString(boolean compress, boolean invoke) {
-		return toString(0, compress, false, invoke);
+		return toString(0, compress, false, invoke, true, true);
+	}
+	
+	@Override
+	public String toString(boolean compress, boolean invoke, boolean comments) {
+		return toString(0, compress, false, invoke, true, comments);
 	}
 	
 	@Override
 	public String toString(int depth, boolean compress, boolean invoke) {
-		return toString(depth, compress, false, invoke);
+		return toString(depth, compress, false, invoke, true, true);
+	}
+	
+	@Override
+	public String toString(int depth, boolean compress, boolean invoke, boolean comments) {
+		return toString(depth, compress, false, invoke, true, comments);
 	}
 	
 	@Override
 	public String toJSON() {
-		return toString(0, false, true, false);
+		return toString(0, false, true, false, false, false);
 	}
 	
 	@Override
 	public String toJSON(boolean compress) {
-		return toString(0, compress, true, false);
+		return toString(0, compress, true, false, false, false);
 	}
 	
 	@Override
 	public String toJSON(boolean compress, boolean invoke) {
-		return toString(0, compress, true, invoke);
+		return toString(0, compress, true, invoke, false, false);
 	}
 	
 	@Override
 	public String toJSON(int depth, boolean compress, boolean invoke) {
-		return toString(depth, compress, true, invoke);
+		return toString(depth, compress, true, invoke, false, false);
 	}
 }
