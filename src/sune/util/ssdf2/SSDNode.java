@@ -2,6 +2,7 @@ package sune.util.ssdf2;
 
 public interface SSDNode {
 	
+	SSDNode copy();
 	boolean isObject();
 	boolean isCollection();
 	SSDNode getParent();

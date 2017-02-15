@@ -12,6 +12,7 @@ import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class SSDAnnotation extends SSDCollection {
 	
@@ -34,6 +35,57 @@ public class SSDAnnotation extends SSDCollection {
 	@Override
 	public void addAnnotation(SSDAnnotation annotation) {
 		// Do nothing
+	}
+	
+	@Override
+	public void removeAnnotation(String name) {
+		// Do nothing
+	}
+	
+	@Override
+	public void removeAnnotation(SSDAnnotation annotation) {
+		// Do nothing
+	}
+	
+	@Override
+	public SSDAnnotation getAnnotation(String name) {
+		// Just return null
+		return null;
+	}
+	
+	@Override
+	public SSDAnnotation[] getAnnotations() {
+		// Just return null
+		return null;
+	}
+	
+	@Override
+	public SSDAnnotation[] getAnnotations(String name) {
+		// Just return null
+		return null;
+	}
+	
+	@Override
+	public SSDAnnotation copy() {
+		// Copy properly all the annotation's objects
+		Map<String, SSDNode> copyObj = new LinkedHashMap<>();
+		for(Entry<String, SSDNode> e : objects().entrySet()) {
+			String  name 	 = e.getKey();
+			SSDNode node 	 = e.getValue();
+			SSDNode copyNode = copyNode(node);
+			if((copyNode != null))
+				copyObj.put(name, copyNode);
+		}
+		return new SSDAnnotation(new String(getName()), copyObj);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if((obj == null
+				|| !(obj instanceof SSDAnnotation)))
+			return false;
+		// Use the SSDCollection equals check
+		return super.equals(obj);
 	}
 	
 	String toString(int depth, boolean compress, boolean json, boolean invoke,

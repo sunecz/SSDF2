@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 public class SSDCollection implements SSDNode, Iterable<SSDNode> {
@@ -969,6 +970,20 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		}
 	}
 	
+	public void removeAnnotation(SSDAnnotation annotation) {
+		// Just remove the annotation
+		annotations.remove(annotation);
+	}
+	
+	void removeAnnotationEq(SSDAnnotation annotation) {
+		for(SSDAnnotation ann : annotations) {
+			if((ann.equals(annotation))) {
+				removeAnnotation(ann);
+				return; // Should be only one
+			}
+		}
+	}
+	
 	@Override
 	public SSDAnnotation getAnnotation(String name) {
 		for(SSDAnnotation ann : annotations)
@@ -1006,9 +1021,73 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return comments.toArray(new SSDComment[comments.size()]);
 	}
 	
+	final static SSDNode copyNode(SSDNode node) {
+		// Collections
+		if((node instanceof SSDCollection)) {
+			return ((SSDCollection) node).copy();
+		}
+		// Objects
+		else if((node instanceof SSDObject)) {
+			return ((SSDObject) node).copy();
+		}
+		// Annotations
+		else if((node instanceof SSDAnnotation)) {
+			return ((SSDAnnotation) node).copy();
+		}
+		// Function calls
+		else if((node instanceof SSDFunctionCall)) {
+			return ((SSDFunctionCall) node).copy();
+		}
+		// Node cannot be copied
+		return null;
+	}
+	
+	@Override
 	public SSDCollection copy() {
-		return new SSDCollection(getParent(), getName(), isArray,
-			new LinkedHashMap<>(objects), new LinkedHashSet<>(annotations));
+		// Copy properly all the collection's objects
+		Map<String, SSDNode> copyObj = new LinkedHashMap<>();
+		for(Entry<String, SSDNode> e : objects.entrySet()) {
+			String  name 	 = e.getKey();
+			SSDNode node 	 = e.getValue();
+			SSDNode copyNode = copyNode(node);
+			if((copyNode != null))
+				copyObj.put(name, copyNode);
+		}
+		// Copy properly all the annotations
+		Set<SSDAnnotation> copyAnn = new LinkedHashSet<>();
+		for(SSDAnnotation a : annotations)
+			// Use the annotation copy function
+			copyAnn.add(a.copy());
+		return new SSDCollection(getParent(), new String(getName()), isArray, copyObj, copyAnn);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if((obj == null
+				|| !(obj instanceof SSDCollection)))
+			return false;
+		SSDCollection coll = (SSDCollection) obj;
+		if((coll.isArray != isArray))
+			return false;
+		if(!coll.getName().equals(name.get()))
+			return false;
+		Map<String, SSDNode> objs = coll.objects;
+		if((objs.size() != objects.size()))
+			return false;
+		for(Entry<String, SSDNode> e : objs.entrySet()) {
+			String  name = e.getKey();
+			SSDNode node = e.getValue();
+			SSDNode eqnd;
+			if((eqnd = objects.get(name)) != null) {
+				if(!eqnd.equals(node))
+					return false;
+			} else {
+				// Has to contain the object
+				return false;
+			}
+		}
+		// All good, both collections contains the same stuff
+		return true;
 	}
 	
 	public SSDCollection filter(SSDFilter filter) {
@@ -1018,7 +1097,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			if(filter.accept(node)) {
 				String name = node.getName();
 				if(node.isCollection()) cl.set(name, (SSDCollection) node);
-				else 					cl.set(name, (SSDObject) 	   node);
+				else 					cl.set(name, (SSDObject) 	 node);
 			}
 		}
 		return cl;
