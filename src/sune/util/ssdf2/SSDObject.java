@@ -19,6 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class SSDObject implements SSDNode {
 	
@@ -192,6 +193,20 @@ public class SSDObject implements SSDNode {
 		}
 	}
 	
+	public void removeAnnotation(SSDAnnotation annotation) {
+		// Just remove the annotation
+		annotations.remove(annotation);
+	}
+	
+	void removeAnnotationEq(SSDAnnotation annotation) {
+		for(SSDAnnotation ann : annotations) {
+			if((ann.equals(annotation))) {
+				removeAnnotation(ann);
+				return; // Should be only one
+			}
+		}
+	}
+	
 	@Override
 	public SSDAnnotation getAnnotation(String name) {
 		for(SSDAnnotation ann : annotations)
@@ -230,6 +245,31 @@ public class SSDObject implements SSDNode {
 	}
 	
 	@Override
+	public SSDObject copy() {
+		return new SSDObject(parent.get(), new String(name.get()), type,
+		                     	new SSDValue(value .value()),
+		                     	new SSDValue(fvalue.value()));
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if((obj == null
+				|| !(obj instanceof SSDObject)))
+			return false;
+		SSDObject o = (SSDObject) obj;
+		if(!o.name.get().equals(name.get()))
+			return false;
+		if((o.type != type))
+			return false;
+		if(!o.value .value().equals(value .value()))
+			return false;
+		if(!o.fvalue.value().equals(fvalue.value()))
+			return false;
+		// All good, both objects contains the same stuff
+		return true;
+	}
+	
+	@Override
 	public boolean isObject() {
 		return true;
 	}
@@ -257,19 +297,35 @@ public class SSDObject implements SSDNode {
 		return n;
 	}
 	
-	String getValueByVarName(String name, boolean compress) {
-		String _root  = WORD_VARIABLE_THIS;
-		int    _depth = 0;
-		String _name  = name;
-		String[] split = name.split("\\" + CHAR_VARIABLE_DELIMITER);
-		int length = split.length;
-		if((length == 3)) {
-			_root  = split[0];
-			_depth = Integer.parseInt(split[1]);
-			_name  = split[2];
-		} else if((length == 2)) {
-			_root  = split[0];
-			_name  = split[1];
+	static final Pattern PATTERN_NUMBER = Pattern.compile("\\d+");
+	SSDNode getValueByVarName(String name, boolean compress) {
+		String   _root  = WORD_VARIABLE_THIS;
+		int      _depth = 0;
+		String[] split  = name.split("\\" + CHAR_VARIABLE_DELIMITER);
+		int    length = split.length, index = 0;
+		String first  = split[0];
+		if((first.equals(WORD_VARIABLE_THIS) ||
+			first.equals(WORD_VARIABLE_MAIN))) {
+			_root = first;
+			index = 1;
+		}
+		if((length > 2)) {
+			String second = split[index];
+			// Only numbers can be parsed
+			if((PATTERN_NUMBER.matcher(second).matches())) {
+				_depth = Integer.parseInt(second);
+				index  = 2;
+			}
+		}
+		StringBuilder sb = new StringBuilder();
+		boolean		  pf = true;
+		for(; index < length; ++index) {
+			if((pf)) {
+				pf = false;
+			} else {
+				sb.append(CHAR_VARIABLE_DELIMITER);
+			}
+			sb.append(split[index]);
 		}
 		SSDNode node = null;
 		switch(_root) {
@@ -280,30 +336,36 @@ public class SSDObject implements SSDNode {
 				break;
 		}
 		if((node != null)) {
-			SSDNode np = getNonNullParent(node, _depth);
-			if(!(np instanceof SSDCollection)) {
-				if((_name.equalsIgnoreCase(WORD_VARIABLE_VALUE))) {
-					return ((SSDObject) np)
-								.getFormattedValue()
-								.stringValue();
+			String  path = sb.toString();
+			SSDNode epar = getNonNullParent(node, _depth-1);
+			SSDNode npar = epar.getParent();
+			if((npar != null)) {
+				if((epar instanceof SSDAnnotation
+						&& path.equals(WORD_VARIABLE_VALUE))) {
+					// Do not return the original node, make a copy
+					npar = SSDCollection.copyNode(npar);
+					// Remove the annotation from the parent since this
+					// would cause recursion
+					SSDAnnotation ann = (SSDAnnotation) epar;
+					// Collections and Annotations
+					if((npar instanceof SSDCollection)) {
+						((SSDCollection) npar).removeAnnotationEq(ann);
+					}
+					// Objects and Function calls
+					else if((npar instanceof SSDObject)) {
+						((SSDObject) npar).removeAnnotationEq(ann);
+					}
+					// Return the edited parent
+					return npar;
 				}
-			} else {
-				SSDCollection parent = (SSDCollection) np;
-				SSDNode 	  object = parent.get(_name);
-				if((object != null)) {
-					String value = object.toString(compress, true);
-					int s = 0, e = value.length();
-					if((value.startsWith(Character.toString(CHAR_DOUBLE_QUOTES))
-					 || value.startsWith(Character.toString(CHAR_SINGLE_QUOTES))))
-						++s;
-					if((value.endsWith(Character.toString(CHAR_DOUBLE_QUOTES))
-					 || value.endsWith(Character.toString(CHAR_SINGLE_QUOTES))))
-						--e;
-					return value.substring(s, e);
+				if((npar instanceof SSDCollection)) {
+					SSDCollection parent = (SSDCollection) npar;
+					// Do not return the original node, make a copy
+					return SSDCollection.copyNode(parent.get(path));
 				}
 			}
 		}
-		return WORD_NULL;
+		return null;
 	}
 	
 	String toString(int depth, boolean compress, boolean json, boolean invoke,
@@ -344,10 +406,12 @@ public class SSDObject implements SSDNode {
 							tm.append((char) c);
 							add = false;
 						} else {
-							String name = tm.toString();
-							String vval = getValueByVarName(name, compress);
+							String  name = tm.toString();
+							SSDNode vval = getValueByVarName(name, compress);
 							tm.setLength(0);
-							vr.append(vval);
+							vr.append(vval != null
+										? vval.toString(depth, compress, invoke, comments)
+							            : WORD_NULL);
 							var = false;
 						}
 					}
@@ -363,17 +427,17 @@ public class SSDObject implements SSDNode {
 				if(add) sb.append((char) c);
 			}
 			if((tm.length() > 0)) {
-				String name = tm.toString();
-				String vval = getValueByVarName(name, compress);
+				String  name = tm.toString();
+				SSDNode vval = getValueByVarName(name, compress);
 				tm.setLength(0);
-				vr.append(vval);
+				vr.append(vval != null
+							? vval.toString(depth, compress, invoke, comments)
+				            : WORD_NULL);
 			}
 			if((vr.length() > 0)) {
 				sb.append(vr.toString());
 				vr.setLength(0);
 			}
-			sb.insert(0, CHAR_DOUBLE_QUOTES);
-			sb.append(CHAR_DOUBLE_QUOTES);
 			return sb.toString();
 		}
 		if(!compress) {

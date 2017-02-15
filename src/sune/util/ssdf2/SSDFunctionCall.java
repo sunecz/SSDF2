@@ -10,6 +10,7 @@ import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -120,6 +121,42 @@ public class SSDFunctionCall extends SSDObject {
 	void addArgs(SSDNode[] nodes) {
 		for(SSDNode node : nodes)
 			addArg(node);
+	}
+	
+	@Override
+	public SSDFunctionCall copy() {
+		// Copy properly all the arguments
+		Set<SSDNode> copyArgs = new LinkedHashSet<>();
+		for(SSDNode n : funcArgs)
+			copyArgs.add(SSDCollection.copyNode(n));
+		return new SSDFunctionCall(getParent(),
+		                           new String(getName()),
+		                           new String(funcName),
+		                           copyArgs);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if((obj == null
+				|| !(obj instanceof SSDFunctionCall)))
+			return false;
+		SSDFunctionCall fc = (SSDFunctionCall) obj;
+		if(!super.equals(fc))
+			return false;
+		if(!fc.funcName.equals(funcName))
+			return false;
+		if((fc.funcArgs.size() != funcArgs.size()))
+			return false;
+		Iterator<SSDNode> ito = fc.funcArgs.iterator();
+		Iterator<SSDNode> itt = funcArgs.iterator();
+		while(ito.hasNext() && itt.hasNext()) {
+			SSDNode no = ito.next();
+			SSDNode nt = itt.next();
+			if(!no.equals(nt))
+				return false;
+		}
+		// All good, both function calls contains the same stuff
+		return true;
 	}
 	
 	public final Object[] invoke() {
