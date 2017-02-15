@@ -126,6 +126,11 @@ public class SSDObject implements SSDNode {
 		}
 	}
 	
+	// Annotations
+	Set<SSDAnnotation> annotations() {
+		return annotations;
+	}
+	
 	@Override
 	public SSDNode getParent() {
 		return parent.get();

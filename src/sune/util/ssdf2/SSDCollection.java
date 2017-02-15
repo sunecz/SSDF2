@@ -1051,7 +1051,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			}
 		}
 		// Append all comments
-		if((comments && !this.comments.isEmpty() && !json)) {
+		if((comments && !this.comments.isEmpty() && !json
+				&& getName() == null)) { // only the parent object
 			boolean cmtf = true;
 			for(SSDComment cmt : this.comments) {
 				if(cmtf) cmtf = false; else
@@ -1095,7 +1096,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					}
 				}
 				// Append all node's comments
-				if((comments && !json && !node.isCollection())) {
+				if((comments && !json)) {
 					SSDComment[] cmts;
 					if((cmts = node.getComments()).length > 0) {
 						boolean cmtf = true;
