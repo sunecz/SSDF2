@@ -73,11 +73,16 @@ public class SSDAnnotation extends SSDCollection {
 				if(!json && node.isObject()) {
 					SSDAnnotation[] anns;
 					if((anns = node.getAnnotations()).length > 0) {
+						boolean annf = true;
 						for(SSDAnnotation ann : anns) {
+							if((annf)) {
+								annf = false;
+							} else {
+								if((ann.objects().isEmpty()) || !compress)
+									buffer.append(CHAR_SPACE);
+							}
 							buffer.append(json ? ann.toJSON(depth, compress, invoke)
 							                   : ann.toString(depth, compress, invoke, comments));
-							if((ann.objects().isEmpty()) || !compress)
-								buffer.append(CHAR_SPACE);
 						}
 					}
 				}

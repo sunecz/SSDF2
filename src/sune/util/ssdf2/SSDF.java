@@ -11,6 +11,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import sune.util.ssdf2.SSDCollection.SSDCollectionType;
 
@@ -91,31 +92,33 @@ public final class SSDF {
 		for(int i = 0, l = chars.length, c; i < l; ++i) {
 			cadd = true;
 			c 	 = chars[i];
-			// Escape logic
-			if(escaped && --escape == 0) 	 escaped = false;
-			if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
-			// Quotes logic
-			if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
-			if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
-			// Formatting logic
-			if(!indq && !insq) {
-				if((cmtcontent)) {
-					if((cmtoneline)) {
-						// One line comment
-						if((c == CHAR_NEWLINE)) {
-							cmtcontent = false;
-							cmtfirst   = false;
-						}
-					} else {
-						// Multiple line comment
-						if((cmtfirst && c == CHAR_COMMENT_FIRST)) {
-							cmtcontent = false;
-							cmtfirst   = false;
-						} else if((c == CHAR_COMMENT_MULTIPLE_LINES)) {
-							cmtfirst = true;
-						}
+			// Comments logic
+			if((cmtcontent)) {
+				// One line comment
+				if((cmtoneline)) {
+					if((c == CHAR_NEWLINE)) {
+						cmtcontent = false;
+						cmtfirst   = false;
 					}
-				} else {
+				}
+				// Multiple line comment
+				else {
+					if((cmtfirst && c == CHAR_COMMENT_FIRST)) {
+						cmtcontent = false;
+						cmtfirst   = false;
+					} else if((c == CHAR_COMMENT_MULTIPLE_LINES)) {
+						cmtfirst = true;
+					}
+				}
+			} else {
+				// Escape logic
+				if(escaped && --escape == 0) 	 escaped = false;
+				if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+				// Quotes logic
+				if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
+				if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq; else
+				// Formatting logic
+				if(!indq && !insq) {
 					if((cmtfirst &&
 							(c == CHAR_COMMENT_ONE_LINE ||
 							 c == CHAR_COMMENT_MULTIPLE_LINES))) {
@@ -207,61 +210,65 @@ public final class SSDF {
 		boolean cmtcontent = false;
 		boolean cmtoneline = false;
 		Deque<SSDComment> comments = new ArrayDeque<>();
+		Deque<SSDAnnotation> annsh = new ArrayDeque<>();
 		// The last content of item when entering a comment
 		String lastContent = null;
-		// Read the characters and construct the map
+		// Read the characters and construct the objects
 		for(int i = off, l = off + len, c; i < l; ++i) {
 			cadd = true;
 			c 	 = chars[i];
-			// Escape logic
-			if(escaped && --escape == 0) 	 escaped = false;
-			if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
-			// Quotes logic
-			if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
-			if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq;
-			// Reading logic
-			else {
-				// Not in quotes
-				if(!indq && !insq) {
-					cadd = false;
-					if((cmtcontent)) {
-						cadd = true;
-						if((cmtoneline)) {
-							// One line comment
-							if((c == CHAR_NEWLINE)) {
-								cmtcontent = false;
-								cmtfirst   = false;
-								// Add comment to the collection
-								String content = temp.substring(0, temp.length()-1)
-													 .toString();
-								comments.push(new SSDComment(content, cmtoneline));
-								temp.setLength(0);
-								if((lastContent != null
-										&& !lastContent.isEmpty()))
-									temp.append(lastContent);
-								cmtoneline = false;
-								cadd 	   = false;
-							}
-						} else {
-							// Multiple line comment
-							if((cmtfirst && c == CHAR_COMMENT_FIRST)) {
-								cmtcontent = false;
-								cmtfirst   = false;
-								// Add comment to the collection
-								String content = temp.substring(0, temp.length()-1)
-													 .toString();
-								comments.push(new SSDComment(content, cmtoneline));
-								temp.setLength(0);
-								if((lastContent != null
-										&& !lastContent.isEmpty()))
-									temp.append(lastContent);
-								cmtoneline = false;
-								cadd 	   = false;
-							} else if((c == CHAR_COMMENT_MULTIPLE_LINES)) {
-								cmtfirst = true;
-							}
-						}
-					} else {
+			// Comments logic
+			if((cmtcontent)) {
+				// One line comment
+				if((cmtoneline)) {
+					if((c == CHAR_NEWLINE)) {
+						cmtcontent = false;
+						cmtfirst   = false;
+						// Add comment to the collection
+						String content = temp.substring(0, temp.length()-1)
+											 .toString();
+						comments.push(new SSDComment(content, cmtoneline));
+						temp.setLength(0);
+						if((lastContent != null
+								&& !lastContent.isEmpty()))
+							temp.append(lastContent);
+						cmtoneline  = false;
+						cadd 	    = false;
+						lastContent = null;
+					}
+				}
+				// Multiple line comment
+				else {
+					if((cmtfirst && c == CHAR_COMMENT_FIRST)) {
+						cmtcontent = false;
+						cmtfirst   = false;
+						// Add comment to the collection
+						String content = temp.substring(0, temp.length()-1)
+											 .toString();
+						comments.push(new SSDComment(content, cmtoneline));
+						temp.setLength(0);
+						if((lastContent != null
+								&& !lastContent.isEmpty()))
+							temp.append(lastContent);
+						cmtoneline  = false;
+						cadd 	    = false;
+						lastContent = null;
+					} else if((c == CHAR_COMMENT_MULTIPLE_LINES)) {
+						cmtfirst = true;
+					}
+				}
+			} else {
+				// Escape logic
+				if(escaped && --escape == 0) 	 escaped = false;
+				if(c == CHAR_ESCAPE && !escaped) escaped = (escape = 2) > 0; else
+				// Quotes logic
+				if(c == CHAR_DOUBLE_QUOTES && !insq && !escaped) indq = !indq; else
+				if(c == CHAR_SINGLE_QUOTES && !indq && !escaped) insq = !insq;
+				// Reading logic
+				else {
+					// Not in quotes
+					if(!indq && !insq) {
+						cadd = false;
 						if((cmtfirst &&
 								(c == CHAR_COMMENT_ONE_LINE ||
 								 c == CHAR_COMMENT_MULTIPLE_LINES))) {
@@ -321,15 +328,23 @@ public final class SSDF {
 									// Current object is a function call
 									else if((c == CHAR_FUNCCALL_OB && isval)) {
 										// Check the function call's name first
+										// Set unspecified temporary name if possible
 										if((tempName == null)) {
-											if((array || function)) {
+											// Annotation (has to be first)
+											if((annsval.peek())) {
+												tempName = WORD_ANNOTATION_DEFAULT;
+											}
+											// Array or function
+											else if((array || function)) {
 												tempName = Integer.toString(counter++);
-											} else if((lobjName != null)) {
+											}
+											// Annotation specified after item name
+											else if((lobjName != null)) {
 												tempName = lobjName;
 												lobjName = null; // Only one use
-											} else if((annsval.peek())) {
-												tempName = WORD_ANNOTATION_DEFAULT;
-											} else {
+											}
+											// Other cases
+											else {
 												tempName = lastName;
 											}
 										}
@@ -341,24 +356,44 @@ public final class SSDF {
 										SSDFunctionCall fc = new SSDFunctionCall(parent, tempName, funcName);
 										// Add the function call to the parents
 										parents.push(fc);
+										if(!anns.isEmpty()) {
+											// Add all the gotten annotations
+											int ai = annsval.peek()
+														? anns.size() - annscnt.peek()
+														: anns.size();
+											annsh.clear(); // Clear the helper deque
+											while(--ai >= 0) annsh.push(anns.pop());
+											// Add the gotten annotations to the object correctly
+											// since annotations are gotten in reversed order
+											for(SSDAnnotation a : annsh)
+												fc.addAnnotation0(a);
+										}
 										// Set the current parent
 										parent 	  = fc;
 										array 	  = true;
 										function  = true;
-										isfsimple = func_isContentSimple(funcName, anns);
+										isfsimple = func_isContentSimple(funcName, fc.annotations());
 										if(isfsimple) ctfsimple = 1;
 									}
 									// Current object is an array or an object
 									else {
+										// Set unspecified temporary name if possible
 										if((tempName == null)) {
-											if((array || function)) {
+											// Annotation (has to be first)
+											if((annsval.peek())) {
+												tempName = WORD_ANNOTATION_DEFAULT;
+											}
+											// Array or function
+											else if((array || function)) {
 												tempName = Integer.toString(counter++);
-											} else if((lobjName != null)) {
+											}
+											// Annotation specified after item name
+											else if((lobjName != null)) {
 												tempName = lobjName;
 												lobjName = null; // Only one use
-											} else if((annsval.peek())) {
-												tempName = WORD_ANNOTATION_DEFAULT;
-											} else {
+											}
+											// Other cases
+											else {
 												tempName = lastName;
 											}
 										}
@@ -379,8 +414,12 @@ public final class SSDF {
 											int ai = annsval.peek()
 														? anns.size() - annscnt.peek()
 														: anns.size();
-											while(--ai >= 0)
-												arr.addAnnotation0(anns.pop());
+											annsh.clear(); // Clear the helper deque
+											while(--ai >= 0) annsh.push(anns.pop());
+											// Add the gotten annotations to the object correctly
+											// since annotations are gotten in reversed order
+											for(SSDAnnotation a : annsh)
+												arr.addAnnotation0(a);
 										}
 										if(!comments.isEmpty()) {
 											// Add all the gotten comments
@@ -419,15 +458,23 @@ public final class SSDF {
 											c == CHAR_FUNCCALL_ARGS_DELIMITER))) {
 									String value;
 									if(!(value = temp.toString()).isEmpty()) {
+										// Set unspecified temporary name if possible
 										if((tempName == null)) {
-											if((array || function)) {
+											// Annotation (has to be first)
+											if((annsval.peek())) {
+												tempName = WORD_ANNOTATION_DEFAULT;
+											}
+											// Array or function
+											else if((array || function)) {
 												tempName = Integer.toString(counter++);
-											} else if((lobjName != null)) {
+											}
+											// Annotation specified after item name
+											else if((lobjName != null)) {
 												tempName = lobjName;
 												lobjName = null; // Only one use
-											} else if((annsval.peek())) {
-												tempName = WORD_ANNOTATION_DEFAULT;
-											} else {
+											}
+											// Other cases
+											else {
 												tempName = lastName;
 											}
 										}
@@ -438,8 +485,12 @@ public final class SSDF {
 												int ai = annsval.peek()
 															? anns.size() - annscnt.peek()
 															: anns.size();
-												while(--ai >= 0)
-													obj.addAnnotation0(anns.pop());
+												annsh.clear(); // Clear the helper deque
+												while(--ai >= 0) annsh.push(anns.pop());
+												// Add the gotten annotations to the object correctly
+												// since annotations are gotten in reversed order
+												for(SSDAnnotation a : annsh)
+													obj.addAnnotation0(a);
 											}
 											if(!comments.isEmpty()) {
 												// Add all the gotten comments
@@ -462,15 +513,23 @@ public final class SSDF {
 									// Add last item in an object, or an array, if needed
 									String value;
 									if(!(value = temp.toString()).isEmpty()) {
+										// Set unspecified temporary name if possible
 										if((tempName == null)) {
-											if((array || function)) {
+											// Annotation (has to be first)
+											if((annsval.peek())) {
+												tempName = WORD_ANNOTATION_DEFAULT;
+											}
+											// Array or function
+											else if((array || function)) {
 												tempName = Integer.toString(counter++);
-											} else if((lobjName != null)) {
+											}
+											// Annotation specified after item name
+											else if((lobjName != null)) {
 												tempName = lobjName;
 												lobjName = null; // Only one use
-											} else if((annsval.peek())) {
-												tempName = WORD_ANNOTATION_DEFAULT;
-											} else {
+											}
+											// Other cases
+											else {
 												tempName = lastName;
 											}
 										}
@@ -481,8 +540,12 @@ public final class SSDF {
 												int ai = annsval.peek()
 															? anns.size() - annscnt.peek()
 															: anns.size();
-												while(--ai >= 0)
-													obj.addAnnotation0(anns.pop());
+												annsh.clear(); // Clear the helper deque
+												while(--ai >= 0) annsh.push(anns.pop());
+												// Add the gotten annotations to the object correctly
+												// since annotations are gotten in reversed order
+												for(SSDAnnotation a : annsh)
+													obj.addAnnotation0(a);
 											}
 											if(!comments.isEmpty()) {
 												// Add all the gotten comments
@@ -509,7 +572,9 @@ public final class SSDF {
 											return (SSDCollection) par;
 										}
 										// Add the constructed function
-										else if((function)) {
+										else if((function
+													// Cannot be argument's annotation
+													&& !annsval.peek())) {
 											isfsimple 				 = false; // important
 											SSDFunctionCall func 	 = (SSDFunctionCall) par;
 											String			funcName = func.getName();
@@ -519,7 +584,9 @@ public final class SSDF {
 									// Set the current parent
 									parent = parents.peek();
 									array  = isParentArray(parent);
-									if((function)) {
+									if((function
+											// Cannot be argument's annotation
+											&& !annsval.peek())) {
 										if((c == CHAR_FUNCCALL_CB))
 											function = false;
 									} else {
@@ -630,7 +697,7 @@ public final class SSDF {
 	}
 	
 	static final String FUNC_CONTENT_SIMPLE = "CONTENT_SIMPLE";
-	static final boolean func_isContentSimple(String funcName, Deque<SSDAnnotation> anns) {
+	static final boolean func_isContentSimple(String funcName, Set<SSDAnnotation> anns) {
 		try {
 			String namespace;
 			String[] split = funcName.split("\\" + CHAR_NAME_DELIMITER);

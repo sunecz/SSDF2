@@ -9,7 +9,6 @@ import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -83,10 +82,7 @@ public class SSDFunctionCall extends SSDObject {
 				case UNKNOWN: 	 return ((namespace == null || namespace.isEmpty())
 											|| SSDF.func_isContentSimple(
 											   		call.funcName,
-											   		new ArrayDeque<SSDAnnotation>() {{
-											   			for(SSDAnnotation a : call.getAnnotations())
-											   				push(a);
-											   		}}) ?
+											   		call.annotations()) ?
 					                         "" : // Just do not add any prefix
 										 	(namespace + CHAR_NAME_DELIMITER)) +
 										 	(obj.stringValue());
@@ -204,16 +200,29 @@ public class SSDFunctionCall extends SSDObject {
 					if(!compress)
 						buffer.append(CHAR_SPACE);
 				}
-				// Append all argument's annotations
-				SSDAnnotation[] anns;
-				if((anns = arg.getAnnotations()).length > 0) {
-					for(SSDAnnotation ann : anns) {
-						buffer.append(ann.toString(compress, invoke, comments));
+				// Append all node's annotations
+				if(!json) {
+					SSDAnnotation[] anns;
+					if((anns = arg.getAnnotations()).length > 0) {
+						for(SSDAnnotation ann : anns) {
+							buffer.append(json ? ann.toJSON(0, compress, invoke)
+							                   : ann.toString(0, compress, invoke, comments));
+							if(!compress) buffer.append(CHAR_SPACE);
+						}
+					}
+				}
+				// Append all node's comments
+				if((comments && !json)) {
+					SSDComment[] cmts;
+					if((cmts = arg.getComments()).length > 0) {
+						for(SSDComment cmt : cmts) {
+							buffer.append(cmt.toString(0, compress));
+						}
 						if(!compress) buffer.append(CHAR_SPACE);
 					}
 				}
-				buffer.append(arg.toString(compress, invoke, comments)
-				              	 .replaceAll("\"", "\\\\\""));
+				String strArg = arg.toString(compress, invoke, comments);
+				buffer.append(json ? strArg.replaceAll("\"", "\\\\\"") : strArg);
 			}
 			buffer.append(CHAR_FUNCCALL_CB);
 			if(json) {
