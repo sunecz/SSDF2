@@ -65,12 +65,12 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	// Method for creating the main parent (object) of the data structure
-	SSDCollection(SSDNode parent, String name) {
+	SSDCollection(SSDNode parent, boolean isArray) {
 		Map<String, SSDNode> objects = new LinkedHashMap<>();
-  		checkArgs(parent, name, objects, true);
+  		checkArgs(parent, null, objects, true);
   		this.parent  = new SSDProperty<>(parent);
-  		this.name 	 = new SSDProperty<>(name);
-  		this.isArray = false; // main object is not an array
+  		this.name 	 = new SSDProperty<>(null); // main object has no name
+  		this.isArray = isArray; // main object can also be an array
   		this.objects = objects;
   		// Annotations
   		this.annotations = new LinkedHashSet<>();
