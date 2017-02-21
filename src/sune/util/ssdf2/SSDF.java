@@ -402,7 +402,7 @@ public final class SSDF {
 										SSDCollection arr;
 										if((parents.isEmpty())) {
 											// If no main object has been yet added, add one
-											arr = new SSDCollection(parent, tempName);
+											arr = new SSDCollection(parent, isarr);
 										} else {
 											// Add a regular array or object
 											arr = new SSDCollection(parent, tempName, isarr);
