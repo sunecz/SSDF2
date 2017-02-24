@@ -14,6 +14,7 @@ import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.CHAR_TAB;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 
 public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
@@ -949,6 +951,25 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					? ""
 					: p.getFullName() + CHAR_NAME_DELIMITER)
 				+ getName();
+	}
+	
+	// Utility method
+	@SuppressWarnings("unchecked")
+	static final <T extends SSDNode> T[] toTypeArray(Collection<SSDNode> coll, Class<T> clazz, Function<SSDNode, Boolean> cond) {
+		Set<T> list = new LinkedHashSet<>();
+		for(SSDNode item : coll) {
+			if(cond.apply(item)) list.add((T) item);
+		}
+		T[] array = (T[]) Array.newInstance(clazz, list.size());
+		return list.toArray(array); // Just return the casted array
+	}
+	
+	public SSDCollection[] toCollectionArray() {
+		return toTypeArray(objects.values(), SSDCollection.class, (item) -> item.isCollection());
+	}
+	
+	public SSDObject[] toObjectArray() {
+		return toTypeArray(objects.values(), SSDObject.class, (item) -> item.isObject());
 	}
 	
 	public void addAnnotation(SSDAnnotation annotation) {

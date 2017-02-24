@@ -48,6 +48,11 @@ public class SSDAnnotation extends SSDCollection {
 	}
 	
 	@Override
+	void removeAnnotationEq(SSDAnnotation annotation) {
+		// Do nothing
+	}
+	
+	@Override
 	public SSDAnnotation getAnnotation(String name) {
 		// Just return null
 		return null;
