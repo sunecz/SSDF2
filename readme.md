@@ -587,5 +587,119 @@ String jsonString = data.toJSON();
 String jsonString = data.toJSON(true);
 ```
 
+# Experimental features
+*Note: Experimental features should be used with caution!*
+
+## Object casting
+To cast a collection to an object in Java, it is needed to have a class with at least one constructor that uses named arguments and `CastEach(class_name)` annotation in SSD File. Then it is only required to call `SSDCasting.tryCast(collection)` method.
+
+### Example
+Casting.java:
+```java
+import java.util.Arrays;
+import sune.util.ssdf2.SSDCasting;
+import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDF;
+
+public class Test {
+    
+    public static void main(String[] args) {
+        SSDCollection coll = SSDF.readResource("/data.ssdf");
+        SSDCollection cmds = coll.getCollection("commands");
+        Command[] commands = SSDCasting.tryCast(cmds);
+        System.out.println(Arrays.toString(commands));
+    }
+}
+```
+
+Command.java:
+```java
+import java.util.Arrays;
+import javafx.beans.NamedArg;
+
+public class Command {
+    
+    public final String name;
+    public final String desc;
+    public final Object[] args;
+    
+    public Command(@NamedArg("name") String name,
+                   @NamedArg("desc") String desc,
+                   @NamedArg("args") Object[] args) {
+        this.name = name;
+        this.desc = desc;
+        this.args = args;
+    }
+}
+```
+
+data.ssdf:
+```
+{
+    @CastEach("Command")
+    commands: [
+        {
+            name: "mysql",
+            desc: "Used for communication with MySQL.",
+            args: [
+                "host",
+                "user",
+                "pass",
+                "db"
+            ]
+        }
+    ]
+}
+```
+
+For default argument values a named collection can be used.
+
+Command.java:
+```java
+import java.util.Map;
+import javafx.beans.NamedArg;
+
+public class Command {
+    
+    public final String name;
+    public final String desc;
+    public final Map<String, Object> args;
+    
+    public Command(@NamedArg("name") String name,
+                   @NamedArg("desc") String desc,
+                   @NamedArg("args") Map<String, Object> args) {
+        this.name = name;
+        this.desc = desc;
+        this.args = args;
+    }
+}
+```
+
+data.ssdf:
+```
+{
+    @CastEach("Command")
+    commands: [
+        {
+            name: "mysql",
+            desc: "Used for communication with MySQL.",
+            args: {
+                host: "default_host",
+                user: "default_user",
+                pass: "default_pass",
+                db:   "default_db"
+            }
+        }
+    ]
+}
+```
+
+### Additional information
+- Arguments' names should be equivalent in constructor declaration (in `@NamedArg(argument_name)` annotation) and in the SSD File.
+- `SSDObject` is always casted to its equivalent class in Java, that means if an object is type of `STRING` it will be casted to Java's `String`, `INTEGER` to Java's `int`, etc.
+- Indexed `SSDCollection` is always casted to `Object[]` array.
+- Named `SSDCollection` is always casted to `Map<String, Object>` map.
+- When using `SSDCasting.tryCast(collection)` method a `null` can be returned or an exception can be thrown. This is due a casting error that means the object cannot be casted.
+
 # License
 MIT (https://github.com/sunecz/SSDF2/blob/master/license.md)
