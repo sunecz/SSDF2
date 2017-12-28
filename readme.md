@@ -80,6 +80,28 @@ SSDNode value = data.get(name);
 
 For arrays with indexes use the same methods but with an index instead of a name.
 
+### Advanced way of getting data
+A quick way to get an object or another one, if the first one does not exist, is using the OR (`|`) operator in the `get` method.
+```java
+// Get the 'first' object, if it exists, otherwise get the 'second' object
+SSDObject object = data.getObject("first|second");
+```
+
+If a default value is needed to be returned, it can be done in two ways:
+1) using the `get` method with a second argument (the default value)
+2) using the RAW VALUE (`*`) operator in the `get` method
+
+```java
+// The first way
+SSDObject object = data.getObject("first", SSDObject.of(null));
+// The second way
+SSDObject object = data.getObject("first|*null");
+```
+
+In both ways if the 'first' object does not exist, `SSDObject` with type `NULL` is returned.
+
+This can be also used with `integers` and `decimals` (&ast;2, &ast;88, &ast;3.141592, ...), `booleans` (&ast;true, &ast;false), `null` (&ast;null), and also `strings` (&ast;\\"a default string\\", ...).
+
 ## Data manipulation
 Some basic operations can be done with the data, such as checking if a value exist, setting, adding, and removing. With these operations it's possible to create and manage basic data structures.
 ```java
@@ -94,6 +116,70 @@ data.remove(name);
 ```
 
 For arrays with indexes use the same methods but with an index instead of a name. In case of the add method there is no need to type an index, therefore `data.add(value)` is the right way to go.
+
+### Advanced data manipulation
+Operators AND (`&`) and OR (`|`) can be used to achieve easier data manipulation.
+
+#### Node existence checking
+To check if more than one object exists, use the AND (`&`) operator.
+```java
+// The first way
+boolean exists = data.has("first") && data.has("second");
+// The second way
+boolean exists = data.has("first&second");
+```
+
+To check if at least one of the objects exists, use the OR (`|`) operator.
+```java
+// The first way
+boolean exists = data.has("first") || data.has("second");
+// The second way
+boolean exists = data.has("first|second");
+```
+
+#### Node value setting
+To set a value to more than one object at the same time, use the AND (`&`) operator.
+```java
+// The first way
+data.set("first", value);
+data.set("second", value);
+// The second way
+data.set("first&second", value);
+```
+
+To set a value to at least one of the objects, use the OR (`|`) operator.
+```java
+// The first way
+if((data.has("first"))) {
+    data.set("first", value);
+} else {
+    data.set("second", value);
+}
+// The second way
+data.set("first|second", value);
+```
+
+#### Node removing
+To remove more than one object at the same time, use the AND (`&`) operator.
+```java
+// The first way
+data.remove("first");
+data.remove("second");
+// The second way
+data.remove("first&second");
+```
+
+To remove at least one of the objects, use the OR (`|`) operator.
+```java
+// The first way
+if((data.has("first"))) {
+    data.remove("first");
+} else {
+    data.remove("second");
+}
+// The second way
+data.remove("first|second");
+```
 
 ## Name of a node
 When doing any operation with a collection or an object, there are two ways of dealing with the names. The first way is calling the correct function to obtain another object or collection, and continuing this way until the final object is returned. The second way is calling the needed function once with a name chain (that is a string containing names of collections and the final object, each seperated by dots).
@@ -452,6 +538,37 @@ Output:
 }
 ```
 
+### Getting function's return value
+To get a function's value directly in Java code, use the `invokeAndGet` method in the `SSDFunctionCall` class.
+```java
+T value = data.getFunctionCall("objectName").invokeAndGet();
+```
+
+#### Example
+Content of `test.ssdf`:
+```
+{
+    value: calc(3*8)
+}
+```
+
+and content of `test.FunctionValueTest` class:
+```java
+package test;
+
+import sune.util.ssdf2.SSDCollection;
+import sune.util.ssdf2.SSDF;
+
+public class FunctionValueTest {
+    
+    public static void main(String[] args) {
+        SSDCollection coll = SSDF.readResource("/test.ssdf");
+        double value = coll.getFunctionCall("value").invokeAndGet();
+        System.out.println(value);
+    }
+}
+```
+
 ## Variables
 When a value is needed to be written again at some place and everytime when this value is changed, it is needed to be changed at that place as well, variables can be used.
 
@@ -591,7 +708,7 @@ String jsonString = data.toJSON(true);
 *Note: Experimental features should be used with caution!*
 
 ## Object casting
-To cast a collection to an object in Java, it is needed to have a class with at least one constructor that uses named arguments and `CastEach(class_name)` annotation in SSD File. Then it is only required to call `SSDCasting.tryCast(collection)` method.
+To cast a collection to an object in Java, it is needed to have a class with at least one constructor that uses named arguments (`sune.util.ssdf2.SSDNamedArg`) and `CastEach(class_name)` annotation in SSD File. Then it is only required to call `SSDCasting.tryCast(collection)` method.
 
 ### Example
 Casting.java:
@@ -615,7 +732,7 @@ public class Test {
 Command.java:
 ```java
 import java.util.Arrays;
-import javafx.beans.NamedArg;
+import sune.util.ssdf2.SSDNamedArg;
 
 public class Command {
     
@@ -623,9 +740,9 @@ public class Command {
     public final String desc;
     public final Object[] args;
     
-    public Command(@NamedArg("name") String name,
-                   @NamedArg("desc") String desc,
-                   @NamedArg("args") Object[] args) {
+    public Command(@SSDNamedArg("name") String name,
+                   @SSDNamedArg("desc") String desc,
+                   @SSDNamedArg("args") Object[] args) {
         this.name = name;
         this.desc = desc;
         this.args = args;
@@ -657,7 +774,7 @@ For default argument values a named collection can be used.
 Command.java:
 ```java
 import java.util.Map;
-import javafx.beans.NamedArg;
+import sune.util.ssdf2.SSDNamedArg;
 
 public class Command {
     
@@ -665,9 +782,9 @@ public class Command {
     public final String desc;
     public final Map<String, Object> args;
     
-    public Command(@NamedArg("name") String name,
-                   @NamedArg("desc") String desc,
-                   @NamedArg("args") Map<String, Object> args) {
+    public Command(@SSDNamedArg("name") String name,
+                   @SSDNamedArg("desc") String desc,
+                   @SSDNamedArg("args") Map<String, Object> args) {
         this.name = name;
         this.desc = desc;
         this.args = args;
@@ -695,7 +812,7 @@ data.ssdf:
 ```
 
 ### Additional information
-- Arguments' names should be equivalent in constructor declaration (in `@NamedArg(argument_name)` annotation) and in the SSD File.
+- Arguments' names should be equivalent in constructor declaration (in `@SSDNamedArg(argument_name)` annotation) and in the SSD File.
 - `SSDObject` is always casted to its equivalent class in Java, that means if an object is type of `STRING` it will be casted to Java's `String`, `INTEGER` to Java's `int`, etc.
 - Indexed `SSDCollection` is always casted to `Object[]` array.
 - Named `SSDCollection` is always casted to `Map<String, Object>` map.
