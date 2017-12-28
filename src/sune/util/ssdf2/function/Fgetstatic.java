@@ -1,27 +1,29 @@
-package sune.util.ssdf2.func;
+package sune.util.ssdf2.function;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import sune.util.ssdf2.SSDFunctionImpl;
 
-public class Func_getstatic implements SSDFunctionImpl {
+public class Fgetstatic implements SSDFunctionImpl {
 	
-	static final Object _value(String path) {
-		if(path == null || path.isEmpty())
+	final Object _value(Object path) {
+		if((path == null
+				|| !(path instanceof String)
+				|| ((String) path).isEmpty()))
 			return null;
 		try {
-			int dotIndex = path.lastIndexOf('.');
+			String pathStr = (String) path;
+			int dotIndex   = pathStr.lastIndexOf('.');
 			if((dotIndex) == -1) return null;
-			String 	 pathClass  = path.substring(0, dotIndex);
-			String   pathObject = path.substring(dotIndex+1);
+			String 	 pathClass  = pathStr.substring(0, dotIndex);
+			String   pathObject = pathStr.substring(dotIndex+1);
 			Class<?> clazz	    = Class.forName(pathClass);
 			Field	 field		= clazz.getDeclaredField(pathObject);
-			if(!field.isAccessible())
-				field.setAccessible(true);
+			field.setAccessible(true); // make the field accessible
 			if(!Modifier.isStatic(field.getModifiers()))
 				return null;
 			Object value = field.get(null);
@@ -45,9 +47,8 @@ public class Func_getstatic implements SSDFunctionImpl {
 			throw new IllegalArgumentException(
 				"Function[getstatic]: Cannot get no objects!");
 		}
-		List<Object> vals = new ArrayList<>();
-		for(Object arg : args)
-			vals.add(_value(arg.toString()));
-		return vals.toArray(new Object[vals.size()]);
+		return Arrays.stream(args, 0, args.length)
+					 .map(this::_value)
+					 .toArray(Object[]::new);
 	}
 }

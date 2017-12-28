@@ -21,7 +21,7 @@ public class SSDAnnotation extends SSDCollection {
 	}
 	
 	SSDAnnotation(String name, Map<String, SSDNode> data) {
-		super(null, name, false, data, null);
+		super(null, name, false, data, null, null);
 	}
 	
 	public static final SSDAnnotation of(String name) {
@@ -81,7 +81,7 @@ public class SSDAnnotation extends SSDCollection {
 			if((copyNode != null))
 				copyObj.put(name, copyNode);
 		}
-		return new SSDAnnotation(new String(getName()), copyObj);
+		return new SSDAnnotation(getName(), copyObj);
 	}
 	
 	@Override

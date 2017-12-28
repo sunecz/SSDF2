@@ -1,7 +1,6 @@
-package sune.util.ssdf2.func;
+package sune.util.ssdf2.function;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 import sune.util.ssdf2.SSDCollection;
 import sune.util.ssdf2.SSDF;
@@ -9,14 +8,19 @@ import sune.util.ssdf2.SSDFunctionImpl;
 import sune.util.ssdf2.SSDNode;
 import sune.util.ssdf2.SSDObject;
 
-public class Func_get implements SSDFunctionImpl {
+public class Fget implements SSDFunctionImpl {
 	
-	static final Object _value(String instance, String path) {
-		if(instance == null || instance.isEmpty() ||
-		   path 	== null || path	   .isEmpty())
+	String _instance;
+	final Object _value(Object path) {
+		if((_instance == null
+				|| _instance.isEmpty()))
 			return null;
-		SSDCollection coll = SSDF.read(instance);
-		SSDNode	  	  node = coll.get(path);
+		if((path == null
+				|| !(path instanceof String)
+				|| ((String) path).isEmpty()))
+			return null;
+		SSDCollection coll = SSDF.read(_instance);
+		SSDNode	  	  node = coll.get((String) path);
 		if((node.isObject())) {
 			SSDObject object = (SSDObject) node;
 			switch(object.getType()) {
@@ -44,10 +48,9 @@ public class Func_get implements SSDFunctionImpl {
 			throw new IllegalArgumentException(
 				"Function[get]: Instance cannot be null!");
 		}
-		String instance   = args[0].toString();
-		List<Object> vals = new ArrayList<>();
-		for(int i = 1, l = args.length; i < l; ++i)
-			vals.add(_value(instance, args[i].toString()));
-		return vals.toArray(new Object[vals.size()]);
+		_instance = args[0].toString();
+		return Arrays.stream(args, 1, args.length)
+					 .map(this::_value)
+					 .toArray(Object[]::new);
 	}
 }
