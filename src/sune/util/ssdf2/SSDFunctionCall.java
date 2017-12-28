@@ -9,6 +9,8 @@ import static sune.util.ssdf2.SSDF.CHAR_SPACE;
 import static sune.util.ssdf2.SSDF.WORD_ANNOTATION_DEFAULT;
 import static sune.util.ssdf2.SSDF.WORD_NULL;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -31,7 +33,7 @@ public class SSDFunctionCall extends SSDObject {
 		this.funcArgs = funcArgs;
 	}
 	
-	static final String   FUNCTION_PREFIX 	  = "sune.util.ssdf2.func.Func_";
+	static final String   FUNCTION_PREFIX 	  = "sune.util.ssdf2.function.F";
 	static final Class<?> FUNCTION_IMPL_CLASS = SSDFunctionImpl.class;
 	static final Object[] funcInvoke(String name, Object... args) {
 		try {
@@ -39,13 +41,27 @@ public class SSDFunctionCall extends SSDObject {
 			// Check if the class is implementation of SSDFunction
 			if((FUNCTION_IMPL_CLASS.isAssignableFrom(clazz))) {
 				// Create a new object of function implementation
-				SSDFunctionImpl impl = (SSDFunctionImpl) clazz.newInstance();
+				SSDFunctionImpl impl = newInstance(clazz);
 				// Invoke the function implementation
 				return impl.invoke(args);
 			}
 		} catch(Exception ex) {
 		}
 		return null;
+	}
+	
+	static final <T> T newInstance(Class<?> clazz)
+			throws InstantiationException,
+			       IllegalAccessException,
+			       NoSuchMethodException,
+			       SecurityException,
+			       IllegalArgumentException,
+			       InvocationTargetException {
+		Constructor<?> ctor = clazz.getDeclaredConstructor();
+		ctor.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		T instance = (T) ctor.newInstance();
+		return instance;
 	}
 	
 	// Convert a SSDNode to an Object
@@ -130,8 +146,8 @@ public class SSDFunctionCall extends SSDObject {
 		for(SSDNode n : funcArgs)
 			copyArgs.add(SSDCollection.copyNode(n));
 		return new SSDFunctionCall(getParent(),
-		                           new String(getName()),
-		                           new String(funcName),
+		                           getName(),
+		                           funcName,
 		                           copyArgs);
 	}
 	
@@ -160,6 +176,11 @@ public class SSDFunctionCall extends SSDObject {
 	}
 	
 	public final Object[] invoke() {
+		// Invoke this function call with its expanded function arguments
+		return invoke(expandFuncArgs(funcArgs));
+	}
+	
+	final Object[] invoke(Set<SSDNode> funcArgs) {
 		// Add the default namespace if there is none
 		String name = funcName;
 		String space;
@@ -169,6 +190,15 @@ public class SSDFunctionCall extends SSDObject {
 		} else  name = space + CHAR_NAME_DELIMITER + name;
 		// Invoke the internal method
 		return funcInvoke(name, convArgs(this, getNamespace(this), funcArgs));
+	}
+	
+	public final <T> T invokeAndGet() {
+		Object[] results = invoke();
+		if((results == null))
+			return null;
+		@SuppressWarnings("unchecked")
+		T theResult = (T) results[0];
+		return theResult;
 	}
 	
 	@Override
@@ -204,10 +234,25 @@ public class SSDFunctionCall extends SSDObject {
 		return funcArgs.toArray(new SSDNode[funcArgs.size()]);
 	}
 	
+	final Set<SSDNode> expandFuncArgs(Set<SSDNode> funcArgs) {
+		Set<SSDNode> funcArgsExp = new LinkedHashSet<>();
+		for(SSDNode arg : funcArgs) {
+			if((arg.isCollection())) {
+				funcArgsExp.add(arg);
+			} else {
+				String argExp = arg.toString(false, true, false);
+				funcArgsExp.add(SSDObject.ofRaw(argExp));
+			}
+		}
+		return funcArgsExp;
+	}
+	
 	String toString(int depth, boolean compress, boolean json, boolean invoke,
 			boolean info, boolean comments) {
 		StringBuilder buffer = new StringBuilder();
 		if((invoke)) {
+			// Invoke this function call with its expanded arguments
+			// and loop through the returned results
 			for(Object value : invoke()) {
 				if((value instanceof SSDCollection)) {
 					SSDCollection coll = (SSDCollection) value;

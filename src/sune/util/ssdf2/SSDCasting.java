@@ -14,9 +14,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javafx.beans.NamedArg;
-import sune.util.ssdf2.SSDCollection.SSDCollectionType;
-
 /**
  * This is an experimental class. Use it with caution!
  */
@@ -89,16 +86,14 @@ public class SSDCasting {
 				   InvocationTargetException {
 		constructors:
 		for(Constructor<?> con : clazz.getDeclaredConstructors()) {
-			if(!con.isAccessible()) {
-				con.setAccessible(true);
-			}
+			con.setAccessible(true); // make the ctor accessible
 			Parameter[] params = con.getParameters();
 			Object[] 	vals   = new Object[params.length];
 			int 		index  = 0;
 			for(Parameter param : params) {
 				Annotation annName;
-				if((annName = param.getAnnotation(NamedArg.class)) != null) {
-					String name = ((NamedArg) annName).value();
+				if((annName = param.getAnnotation(SSDNamedArg.class)) != null) {
+					String name = ((SSDNamedArg) annName).value();
 					SSDNode node;
 					if((node = args.get(name)) != null) {
 						if((node.isObject())) {

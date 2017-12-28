@@ -107,8 +107,20 @@ public class SSDObject implements SSDNode {
 	
 	public static SSDObject of(String name, Object value) {
 		return new SSDObject(null, name, value != null
-											? value.toString()
+											? value instanceof String
+												? CHAR_DOUBLE_QUOTES
+													+ (String) value
+													+ CHAR_DOUBLE_QUOTES
+												: value.toString()
 											: WORD_NULL);
+	}
+	
+	public static SSDObject ofRaw(String value) {
+		return ofRaw(genRandomName(16), value);
+	}
+	
+	public static SSDObject ofRaw(String name, String value) {
+		return new SSDObject(null, name, value);
 	}
 	
 	void addAnnotations0(Set<SSDAnnotation> anns) {
@@ -246,9 +258,11 @@ public class SSDObject implements SSDNode {
 	
 	@Override
 	public SSDObject copy() {
-		return new SSDObject(parent.get(), new String(name.get()), type,
-		                     	new SSDValue(value .value()),
-		                     	new SSDValue(fvalue.value()));
+		return new SSDObject(getParent(),
+		                     getName(),
+		                     getType(),
+		                     new SSDValue(value .value()),
+		                     new SSDValue(fvalue.value()));
 	}
 	
 	@Override
@@ -298,7 +312,7 @@ public class SSDObject implements SSDNode {
 	}
 	
 	static final Pattern PATTERN_NUMBER = Pattern.compile("\\d+");
-	SSDNode getValueByVarName(String name, boolean compress) {
+	SSDNode getNodeByVarName(String name, boolean compress) {
 		String   _root  = WORD_VARIABLE_THIS;
 		int      _depth = 0;
 		String[] split  = name.split("\\" + CHAR_VARIABLE_DELIMITER);
@@ -327,10 +341,11 @@ public class SSDObject implements SSDNode {
 			}
 			sb.append(split[index]);
 		}
+		boolean main = false;
 		SSDNode node = null;
 		switch(_root) {
-			case WORD_VARIABLE_THIS: node = this; 	   break;
-			case WORD_VARIABLE_MAIN: node = getRoot(); break;
+			case WORD_VARIABLE_THIS: node = this; 	                break;
+			case WORD_VARIABLE_MAIN: node = getRoot(); main = true; break;
 			default:
 				// Just do nothing
 				break;
@@ -338,7 +353,7 @@ public class SSDObject implements SSDNode {
 		if((node != null)) {
 			String  path = sb.toString();
 			SSDNode epar = getNonNullParent(node, _depth-1);
-			SSDNode npar = epar.getParent();
+			SSDNode npar = main ? epar : epar.getParent();
 			if((npar != null)) {
 				if((epar instanceof SSDAnnotation
 						&& path.equals(WORD_VARIABLE_VALUE))) {
@@ -368,6 +383,33 @@ public class SSDObject implements SSDNode {
 		return null;
 	}
 	
+	static final String substr(String str, int start, int end) {
+		if((str == null)) return null;
+		if((start < 0 || (end >= 0 && end < start)))
+			return str;
+		if((end < 0))
+			end += str.length();
+		return str.substring(start, end);
+	}
+	
+	static final String fixValue(SSDNode node, String value) {
+		if((node.isCollection())) return value;
+		SSDObject object = (SSDObject) node;
+		if((object.getType() == SSDType.STRING)) {
+			int start = 0;
+			int end   = value.length();
+			int last  = value.length() - 1;
+			if((value.indexOf(CHAR_DOUBLE_QUOTES) == 0 ||
+				value.indexOf(CHAR_SINGLE_QUOTES) == 0))
+				start = 1;
+			if((value.lastIndexOf(CHAR_DOUBLE_QUOTES) == last ||
+				value.lastIndexOf(CHAR_SINGLE_QUOTES) == last))
+				end = -1;
+			value = substr(value, start, end);
+		}
+		return value;
+	}
+	
 	String toString(int depth, boolean compress, boolean json, boolean invoke,
 			boolean info, boolean comments) {
 		if((value == null)) return WORD_NULL;
@@ -385,6 +427,8 @@ public class SSDObject implements SSDNode {
 			// Miscellaneous
 			boolean var = false;
 			boolean add = false;
+			// If true, concatenation was present
+			boolean cnt = false;
 			// Replace variables with actual values
 			char[] chars = sval.toCharArray();
 			for(int i = 0, l = chars.length, c; i < l; ++i) {
@@ -399,7 +443,7 @@ public class SSDObject implements SSDNode {
 				// Checking logic
 				if(!indq && !insq) {
 					if((var)) {
-						// Check if variable name is present and valid?
+						// Check if variable name is present and valid
 						if((Character.isLetterOrDigit(c))
 								|| c == '_'
 								|| c == '.') {
@@ -407,10 +451,10 @@ public class SSDObject implements SSDNode {
 							add = false;
 						} else {
 							String  name = tm.toString();
-							SSDNode vval = getValueByVarName(name, compress);
+							SSDNode vval = getNodeByVarName(name, compress);
 							tm.setLength(0);
 							vr.append(vval != null
-										? vval.toString(depth, compress, invoke, comments)
+										? fixValue(vval, vval.toString(depth, compress, invoke, comments))
 							            : WORD_NULL);
 							var = false;
 						}
@@ -422,23 +466,28 @@ public class SSDObject implements SSDNode {
 						sb.append(vr.toString());
 						vr.setLength(0);
 						add = false;
+						cnt = true;
 					}
 				}
 				if(add) sb.append((char) c);
 			}
 			if((tm.length() > 0)) {
 				String  name = tm.toString();
-				SSDNode vval = getValueByVarName(name, compress);
+				SSDNode vval = getNodeByVarName(name, compress);
 				tm.setLength(0);
 				vr.append(vval != null
-							? vval.toString(depth, compress, invoke, comments)
+							? fixValue(vval, vval.toString(depth, compress, invoke, comments))
 				            : WORD_NULL);
 			}
 			if((vr.length() > 0)) {
 				sb.append(vr.toString());
 				vr.setLength(0);
 			}
-			return sb.toString();
+			sval = sb.toString();
+			if((cnt)) {
+				sval = CHAR_DOUBLE_QUOTES + sval + CHAR_DOUBLE_QUOTES;
+			}
+			return sval;
 		}
 		if(!compress) {
 			StringBuilder sb = new StringBuilder();

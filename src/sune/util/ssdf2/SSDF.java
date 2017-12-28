@@ -13,16 +13,16 @@ import java.util.Deque;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import sune.util.ssdf2.SSDCollection.SSDCollectionType;
-
 public final class SSDF {
 	
 	// General characters
-	static final char CHAR_NEWLINE		  		= '\n';
-	static final char CHAR_TAB			  		= '\t';
-	static final char CHAR_SPACE		  		= ' ';
-	static final char CHAR_NAME_DELIMITER 		= '.';
+	static final char CHAR_NEWLINE              = '\n';
+	static final char CHAR_TAB                  = '\t';
+	static final char CHAR_SPACE                = ' ';
+	static final char CHAR_NAME_DELIMITER       = '.';
 	static final char CHAR_ANNOTATION_DELIMITER = ':';
+	static final char CHAR_AND_DELIMITER        = '&';
+	static final char CHAR_OR_DELIMITER         = '|';
 	// General syntax
 	static final char CHAR_OBJECT_OB 	  = '{';
 	static final char CHAR_OBJECT_CB 	  = '}';
@@ -588,7 +588,7 @@ public final class SSDF {
 											// Cannot be argument's annotation
 											&& !annsval.peek())) {
 										if((c == CHAR_FUNCCALL_CB))
-											function = false;
+											function = parent instanceof SSDFunctionCall;
 									} else {
 										if((annsval.peek() && c == CHAR_ANNOTATION_CB)) {
 											annsval.pop();
@@ -683,7 +683,8 @@ public final class SSDF {
 										  fname,
 										  true,
 										  vc.objects(),
-										  vc.annotations()) :
+										  vc.annotations(),
+										  vc.comments()) :
 						vc);
 				nc.addObject(fname, kc);
 			} else if(value instanceof SSDObject) {
@@ -720,8 +721,7 @@ public final class SSDF {
 			Class<?> clazz = Class.forName(className);
 			if((SSDFunctionCall.FUNCTION_IMPL_CLASS.isAssignableFrom(clazz))) {
 				Field field = clazz.getDeclaredField(FUNC_CONTENT_SIMPLE);
-				if(!field.isAccessible())
-					field.setAccessible(true);
+				field.setAccessible(true); // make the field accessible
 				if((Modifier.isStatic(field.getModifiers()))) {
 					if((field.getType() == boolean.class ||
 						field.getType() == Boolean.class)) {
@@ -780,14 +780,6 @@ public final class SSDF {
 		return read(resourceStream(path));
 	}
 	
-	public static final SSDCollection readJSONResource(String path) {
-		if(path == null || path.isEmpty()) {
-			throw new IllegalArgumentException(
-				"Path cannot be null nor empty!");
-		}
-		return readJSON(resourceStream(path));
-	}
-	
 	public static final SSDCollection readJSON(String json) {
 		return convertJSONNames(read(json));
 	}
@@ -798,5 +790,9 @@ public final class SSDF {
 	
 	public static final SSDCollection readJSON(File file) {
 		return convertJSONNames(read(file));
+	}
+	
+	public static final SSDCollection readJSONResource(String path) {
+		return convertJSONNames(readResource(path));
 	}
 }

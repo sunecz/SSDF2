@@ -11,18 +11,16 @@ import static sune.util.ssdf2.SSDF.WORD_TRUE;
 
 import java.util.regex.Pattern;
 
-import sune.util.ssdf2.func.FuncUtils;
-
 public enum SSDType {
 	
-	NULL("^("+WORD_NULL+")$") {
+	NULL("^(" + WORD_NULL + ")$") {
 		
 		@Override
 		String fixValue(String value) {
 			return WORD_NULL;
 		}
 	},
-	BOOLEAN("^("+WORD_TRUE+"|"+WORD_FALSE+")$") {
+	BOOLEAN("^(" + WORD_TRUE + "|" + WORD_FALSE + ")$") {
 		
 		@Override
 		String fixValue(String value) {
@@ -63,8 +61,8 @@ public enum SSDType {
 			return sb.toString();
 		}
 	},
-	STRING("^["+CHAR_DOUBLE_QUOTES+"|"+CHAR_SINGLE_QUOTES+"](.*?)" +
-			"["+CHAR_DOUBLE_QUOTES+"|"+CHAR_SINGLE_QUOTES+"]$") {
+	STRING("^[" + CHAR_DOUBLE_QUOTES + "|" + CHAR_SINGLE_QUOTES + "](.*?)" +
+			"[" + CHAR_DOUBLE_QUOTES + "|" + CHAR_SINGLE_QUOTES + "]$") {
 		
 		@Override
 		public SSDValue format(String value) {
@@ -192,7 +190,7 @@ public enum SSDType {
 	// Type recognition using classes
 	public static final SSDType recognize(Object value) {
 		if((value != null)) {
-			Class<?> clazz = FuncUtils.toPrimitive(value.getClass());
+			Class<?> clazz = SSDFunctionUtils.toPrimitive(value.getClass());
 			if((clazz == boolean.class))
 				return BOOLEAN;
 	        if((clazz == byte.class
@@ -223,5 +221,9 @@ public enum SSDType {
 	
 	public SSDValue format(String value) {
 		return new SSDValue(value);
+	}
+	
+	String getRegex() {
+		return regex;
 	}
 }

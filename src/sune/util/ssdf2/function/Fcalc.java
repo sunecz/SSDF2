@@ -1,21 +1,23 @@
-package sune.util.ssdf2.func;
+package sune.util.ssdf2.function;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import sune.util.ssdf2.SSDFunctionImpl;
 
-public class Func_calc implements SSDFunctionImpl {
+public class Fcalc implements SSDFunctionImpl {
 	
 	public static final boolean CONTENT_SIMPLE = true;
 	
-	static final Object _value(String expr) {
-		if(expr == null || expr.isEmpty())
-			return null;
-		return SimpleMath.calc(expr);
+	final double _value(Object expr) {
+		if((expr == null
+				|| !(expr instanceof String))
+				|| ((String) expr).isEmpty())
+			return Double.NaN;
+		String exprStr = (String) expr;
+		return SimpleMath.calc(exprStr);
 	}
 	
 	@Override
@@ -24,10 +26,9 @@ public class Func_calc implements SSDFunctionImpl {
 			throw new IllegalArgumentException(
 				"Function[calc]: Cannot calculate no objects!");
 		}
-		List<Object> vals = new ArrayList<>();
-		for(Object arg : args)
-			vals.add(_value(arg.toString()));
-		return vals.toArray(new Object[vals.size()]);
+		return Arrays.stream(args, 0, args.length)
+					 .map(this::_value)
+					 .toArray(Object[]::new);
 	}
 	
 	static final class SimpleMath {
@@ -71,7 +72,7 @@ public class Func_calc implements SSDFunctionImpl {
 				@Override
 				public double process(double a, double b) {
 					// x^y = exp(y*log(x))
-					return Math.exp(b*Math.log(a));
+					return Math.exp(b * Math.log(a));
 				}
 			},
 			UNKNOWN(0, '\u0000');
@@ -134,13 +135,13 @@ public class Func_calc implements SSDFunctionImpl {
 			
 			public Token next() {
 				char c = chars[index++];
-				// TYPE: FUNCTION ARGUMENT SEPARATOR
+				// Type: FUNCTION ARGUMENT SEPARATOR
 				if(c == ',') return new Token(TokenType.FUNCTION_ARG_SEP, Character.toString(c));
-				// TYPE: LEFT BRACKET
+				// Type: LEFT BRACKET
 				if(c == '(') return new Token(TokenType.LEFT_BRACKET, Character.toString(c));
-				// TYPE: RIGHT BRACKET
+				// Type: RIGHT BRACKET
 				if(c == ')') return new Token(TokenType.RIGHT_BRACKET, Character.toString(c));
-				// TYPE: OPERATOR
+				// Type: OPERATOR
 				Operator o;
 				if((o = operator(c)) != Operator.UNKNOWN)
 					return new Token(TokenType.OPERATOR, o);
@@ -202,7 +203,7 @@ public class Func_calc implements SSDFunctionImpl {
 			public Token next() {
 				String part  = parts[index++];
 				char[] chars = part.toCharArray();
-				// TYPE: OPERATOR
+				// Type: OPERATOR
 				Operator o;
 				if((o = operator(chars[0])) != Operator.UNKNOWN)
 					return new Token(TokenType.OPERATOR, o);
@@ -475,7 +476,7 @@ public class Func_calc implements SSDFunctionImpl {
 		 * 	<li>sinus ({@code sin(a)})</li>
 		 * 	<li>cosinus ({@code cos(a)})</li>
 		 * 	<li>tangens ({@code tan(a)})</li>
-		 * 	<li>logarithm ({@code log(b, a)}, where b is base)</li>
+		 * 	<li>logarithm ({@code log(b,a)}, where b is base)</li>
 		 * </ul>
 		 * Constants that can be used:<br><br>
 		 * <ul>
@@ -483,7 +484,7 @@ public class Func_calc implements SSDFunctionImpl {
 		 * 	<li>E ({@code e})</li>
 		 * </ul>
 		 * <b>Note:</b> Using brackets is necessary in some cases! Ensure that all expression
-		 * that can be misunderstanded are in brackets in that way they are thought to be.<br><br>
+		 * that can be misunderstood are in brackets in that way they are thought to be.<br><br>
 		 * @param expression Mathematical expression to be calculated.
 		 * @return Calculated result of the given mathematical expression.*/
 		public static final double calc(String expression) {

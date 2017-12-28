@@ -36,6 +36,10 @@ public class SSDComment {
 		return oneLine;
 	}
 	
+	public SSDComment copy() {
+		return new SSDComment(content, oneLine);
+	}
+	
 	String toString(int depth, boolean compress) {
 		StringBuilder buffer = new StringBuilder();
 		if(!compress) {

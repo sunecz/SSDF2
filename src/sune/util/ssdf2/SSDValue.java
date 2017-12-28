@@ -20,9 +20,9 @@ public final class SSDValue {
 	public Object value() 		  { return value; }
 	
 	@SuppressWarnings("unchecked")
-	<T> T cast(Class<? extends T> clazz) {
+	private final <T> T cast(Class<? extends T> clazz) {
 		if((value == null)) return null;
-		if(!value.getClass().isAssignableFrom(clazz)) {
+		if(!clazz.isAssignableFrom(value.getClass())) {
 			throw new ClassCastException(
 				"Cannot cast value (of type " + value.getClass() + ") " +
 				"to type " + clazz + "!");

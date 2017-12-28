@@ -1,6 +1,6 @@
-package sune.util.ssdf2.func;
+package sune.util.ssdf2;
 
-public class FuncUtils {
+public class SSDFunctionUtils {
 	
 	public static final Class<?>[] recognizeClasses(Object... arguments) {
 		int length 		   = arguments.length;
