@@ -6,7 +6,6 @@ SSDF2 is an updated version of [SSDF-Reader](https://github.com/sunecz/SSDF-Read
 # Syntax
 As it was said, syntax is similiar to JSON Syntax and identical with JS object definition, but contains some features that none of JSON or JS object definition have.
 
-
 ### Example
 ```
 {
