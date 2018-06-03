@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!-- Generates a JAR file with JAR source file. -->
+<project name="generate_jar" default="all">
+    <property name="dir.bin" location="bin/" />
+	<property name="dir.src" location="src/" />
+	<property name="dir.jar" location="jar/" />
+	<target name="all" depends="clr,jar,src">
+		<!-- Runs all the other targets. -->
+	</target>
+	<target name="clr">
+		<delete file="${dir.jar}/ssdf2.jar" />
+		<delete file="${dir.jar}/ssdf2-source.jar" />
+	</target>
+    <target name="jar">
+    	<echo message="Generating JAR file..." />
+        <jar destfile="${dir.jar}/ssdf2.jar" basedir="${dir.bin}" />
+    </target>
+	<target name="src" depends="jar">
+    	<echo message="Generating JAR source file..." />
+		<zip destfile="${dir.jar}/ssdf2-source.jar" basedir="${dir.src}" />
+    </target>
+</project>
