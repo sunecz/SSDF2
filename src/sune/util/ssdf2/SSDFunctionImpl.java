@@ -39,7 +39,7 @@ public interface SSDFunctionImpl {
 	
 	// Array conversion
 	static SSDCollection toArray(Object[] array) {
-		SSDCollection coll = SSDCollection.empty(true);
+		SSDCollection coll = SSDCollection.emptyArray();
 		for(Object object : array) {
 			if(object != null) {
 				if(object.getClass().isArray()) {
@@ -60,7 +60,7 @@ public interface SSDFunctionImpl {
 	
 	// List conversion
 	static SSDCollection toArray(List<?> list) {
-		SSDCollection coll = SSDCollection.empty(true);
+		SSDCollection coll = SSDCollection.emptyArray();
 		for(Object object : list) {
 			if(object != null) {
 				if(object.getClass().isArray()) {
@@ -105,7 +105,7 @@ public interface SSDFunctionImpl {
 	
 	// Set conversion
 	static SSDCollection toArray(Set<?> list) {
-		SSDCollection coll = SSDCollection.empty(true);
+		SSDCollection coll = SSDCollection.emptyArray();
 		for(Object object : list) {
 			if(object != null) {
 				if(object.getClass().isArray()) {

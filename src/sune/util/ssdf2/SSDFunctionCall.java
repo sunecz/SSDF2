@@ -215,16 +215,15 @@ public class SSDFunctionCall extends SSDObject {
 		return getValue();
 	}
 	
-	public boolean booleanValue() 				 { return getValue().booleanValue(); }
-	public byte byteValue() 	  				 { return getValue().byteValue(); 	 }
-	public short shortValue() 	  				 { return getValue().shortValue();   }
-	public int intValue() 		  				 { return getValue().intValue(); 	 }
-	public long longValue() 	  				 { return getValue().longValue(); 	 }
-	public float floatValue() 	  				 { return getValue().floatValue();   }
-	public double doubleValue()   				 { return getValue().doubleValue();  }
-	public String stringValue()   				 { return getValue().stringValue();  }
-	public Object value() 		 				 { return getValue().value(); 		 }
-	public <T> T value(Class<? extends T> clazz) { return getValue().value(clazz); 	 }
+	public boolean booleanValue() { return getValue().booleanValue(); }
+	public byte byteValue()       { return getValue().byteValue();    }
+	public short shortValue()     { return getValue().shortValue();   }
+	public int intValue()         { return getValue().intValue();     }
+	public long longValue()       { return getValue().longValue();    }
+	public float floatValue()     { return getValue().floatValue();   }
+	public double doubleValue()   { return getValue().doubleValue();  }
+	public String stringValue()   { return getValue().stringValue();  }
+	public Object value()         { return getValue().value();        }
 	
 	public String getFunctionName() {
 		return funcName;

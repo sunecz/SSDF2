@@ -1,16 +1,16 @@
 package sune.util.ssdf2;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Deque;
-import java.util.Map.Entry;
 import java.util.Set;
 
 public final class SSDF {
@@ -163,8 +163,7 @@ public final class SSDF {
 	
 	static final SSDCollection readObjects(char[] chars, int off, int len) {
 		if((chars == null))
-			throw new IllegalArgumentException(
-				"Cannot read null array of characters!");
+			throw new IllegalArgumentException("Cannot read null array of characters");
 		// Do some checking before the actual reading
 		int length = chars.length;
 		if((length == 0 || off < 0 || off >= length || len < 0 || off+len > length))
@@ -634,67 +633,49 @@ public final class SSDF {
 		return false;
 	}
 	
-	static final Charset CHARSET = Charset.forName("UTF-8");
+	private static final int DEFAULT_BUFFER_SIZE = 8192;
+	private static final int MAX_BUFFER_SIZE     = Integer.MAX_VALUE - 8;
+	
+	/**
+	 * Reads all bytes in the stream. This method is directly ported from Java 10.*/
+	static final byte[] streamToByteArray(InputStream stream) throws IOException {
+		if((stream == null))
+			throw new IllegalArgumentException("Stream cannot be null!");
+        byte[] buf = new byte[DEFAULT_BUFFER_SIZE];
+        int capacity = buf.length;
+        int nread = 0;
+        int n;
+        for(;;) {
+            // read to EOF which may read more or less than initial buffer size
+            while((n = stream.read(buf, nread, capacity - nread)) > 0)
+                nread += n;
+            // if the last call to read returned -1, then we're done
+            if((n < 0))
+                break;
+            // need to allocate a larger buffer
+            if((capacity <= MAX_BUFFER_SIZE - capacity)) {
+                capacity = capacity << 1;
+            } else {
+                if((capacity == MAX_BUFFER_SIZE))
+                    throw new OutOfMemoryError("Required array size too large");
+                capacity = MAX_BUFFER_SIZE;
+            }
+            buf = Arrays.copyOf(buf, capacity);
+        }
+        return (capacity == nread) ? buf : Arrays.copyOf(buf, nread);
+    }
+	
+	static final Charset CHARSET = StandardCharsets.UTF_8;
 	static final String streamToString(InputStream stream) {
-		if(stream == null) {
-			throw new IllegalArgumentException(
-				"Stream cannot be null!");
+		try {
+			return new String(streamToByteArray(stream), CHARSET);
+		} catch(IOException ex) {
 		}
-		try(ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-			try(BufferedInputStream bis = new BufferedInputStream(stream)) {
-				int    read	  = 0;
-				byte[] buffer = new byte[8192];
-				while((read = bis.read(buffer)) != -1)
-					baos.write(buffer, 0, read);
-			}
-			return new String(baos.toByteArray(), CHARSET);
-		} catch(Exception ex) {
-			throw new IllegalStateException(
-				"Cannot convert the given stream to a string!");
-		}
+		return null;
 	}
 	
 	static final InputStream resourceStream(String path) {
 		return SSDF.class.getResourceAsStream(path);
-	}
-	
-	static final SSDCollection convertJSONNames(SSDCollection sc) {
-		String cname 	 = sc.getName();
-		SSDCollection nc = cname == null || cname.isEmpty()
-			? SSDCollection.empty()
-			: new SSDCollection(
-				sc.getParent(),
-				cname.startsWith("\"") && cname.endsWith("\"") ?
-					cname.substring(1, cname.length()-1) :
-					cname,
-				sc.getType() == SSDCollectionType.ARRAY
-			);
-		for(Entry<String, SSDNode> e : sc.objects().entrySet()) {
-			String name   = e.getKey();
-			SSDNode value = e.getValue();
-			String fname  = name.startsWith("\"") && name.endsWith("\"") ?
-								name.substring(1, name.length()-1) :
-								name;
-			if(value instanceof SSDCollection) {
-				SSDCollection vc = (SSDCollection) value;
-				SSDCollection kc = convertJSONNames(
-					vc.getType() == SSDCollectionType.ARRAY ?
-						new SSDCollection(vc.getParent(),
-										  fname,
-										  true,
-										  vc.objects(),
-										  vc.annotations(),
-										  vc.comments()) :
-						vc);
-				nc.addObject(fname, kc);
-			} else if(value instanceof SSDObject) {
-				SSDObject oo = (SSDObject) value;
-				SSDObject no = new SSDObject(oo.getParent(), fname, oo.getType(),
-					oo.getValue(), oo.getFormattedValue());
-				nc.addObject(fname, no);
-			}
-		}
-		return nc;
 	}
 	
 	static final String FUNC_CONTENT_SIMPLE = "CONTENT_SIMPLE";
@@ -739,60 +720,193 @@ public final class SSDF {
 	}
 	
 	public static final SSDCollection emptyArray() {
-		return SSDCollection.empty(true);
+		return SSDCollection.emptyArray();
 	}
 	
 	public static final SSDCollection read(String content) {
-		if(content == null) {
-			throw new IllegalArgumentException(
-				"Content cannot be null!");
+		if((content == null)) {
+			throw new IllegalArgumentException("Content cannot be null");
 		}
 		char[] chars = format(content.toCharArray());
 		return readObjects(chars, 0, chars.length);
 	}
 	
 	public static final SSDCollection read(InputStream stream) {
-		if(stream == null) {
-			throw new IllegalArgumentException(
-				"Stream cannot be null!");
+		if((stream == null)) {
+			throw new IllegalArgumentException("Stream cannot be null");
 		}
 		return read(streamToString(stream));
 	}
 	
 	public static final SSDCollection read(File file) {
-		if(file == null) {
-			throw new IllegalArgumentException(
-				"File cannot be null!");
+		if((file == null)) {
+			throw new IllegalArgumentException("File cannot be null");
 		}
 		try {
-			return read(streamToString(new FileInputStream(file)));
+			return read(new FileInputStream(file));
 		} catch(Exception ex) {
-			throw new IllegalStateException(
-				"An error has occurred while trying to read the given file!");
+			throw new IllegalStateException("An error has occurred while trying to read the given file");
 		}
 	}
 	
 	public static final SSDCollection readResource(String path) {
-		if(path == null || path.isEmpty()) {
-			throw new IllegalArgumentException(
-				"Path cannot be null nor empty!");
+		if((path == null || path.isEmpty())) {
+			throw new IllegalArgumentException("Path cannot be null or empty");
 		}
 		return read(resourceStream(path));
 	}
 	
 	public static final SSDCollection readJSON(String json) {
-		return convertJSONNames(read(json));
+		return JSON.read(json);
 	}
 	
 	public static final SSDCollection readJSON(InputStream stream) {
-		return convertJSONNames(read(stream));
+		return JSON.read(stream);
 	}
 	
 	public static final SSDCollection readJSON(File file) {
-		return convertJSONNames(read(file));
+		return JSON.read(file);
 	}
 	
 	public static final SSDCollection readJSONResource(String path) {
-		return convertJSONNames(readResource(path));
+		return JSON.readResource(path);
+	}
+	
+	// class for reading JSON strings, streams, files, and resources
+	private static final class JSON {
+		
+		public static final SSDCollection read(String content) {
+			if((content == null)) {
+				throw new IllegalArgumentException("Content cannot be null");
+			}
+			return read(content, 0, content.length());
+		}
+		
+		public static final SSDCollection read(InputStream stream) {
+			if((stream == null)) {
+				throw new IllegalArgumentException("Stream cannot be null");
+			}
+			return read(streamToString(stream));
+		}
+		
+		public static final SSDCollection read(File file) {
+			if((file == null)) {
+				throw new IllegalArgumentException("File cannot be null");
+			}
+			try {
+				return read(new FileInputStream(file));
+			} catch(Exception ex) {
+				throw new IllegalStateException("An error has occurred while trying to read the given file");
+			}
+		}
+		
+		public static final SSDCollection readResource(String path) {
+			if((path == null || path.isEmpty())) {
+				throw new IllegalArgumentException("Path cannot be null or empty");
+			}
+			return read(resourceStream(path));
+		}
+		
+		private static final SSDCollection read(String content, int off, int len) {
+			// determining if a character is in double quotes
+			boolean              indq     = false;
+			// determining if a character is in single quotes
+			boolean              insq     = false;
+			// temporary objects for names and values
+			StringBuilder        temp     = new StringBuilder();
+			String               lastTemp = null;
+			// determining if a character can be added
+			boolean              cadd     = false;
+			// determining if a character is escaped
+			boolean              escaped  = false;
+			// current escape strength
+			int	                 escape   = 0;
+			// objects for handling information about parents
+			Deque<SSDCollection> parents  = new ArrayDeque<>();
+			SSDCollection        parent   = null;
+			boolean              isArray  = false;
+			// read the characters and construct the objects
+			for(int i = off, l = off + len, c; i < l; ++i) {
+				cadd = true;
+				c 	 = content.charAt(i);
+				// escape logic
+				if((escaped && --escape == 0))     escaped = false;
+				if((c == CHAR_ESCAPE && !escaped)) escaped = (escape = 2) > 0; else
+				// quotes logic
+				if((c == CHAR_DOUBLE_QUOTES && !insq && !escaped)) indq = !indq; else
+				if((c == CHAR_SINGLE_QUOTES && !indq && !escaped)) insq = !insq;
+				// reading logic
+				else {
+					// check if not in quotes
+					if(!indq && !insq) {
+						cadd = false;
+						// remove useless whitespace characters
+						if((Character.isWhitespace(c))) {
+							while(Character.isWhitespace(c))
+								c = content.charAt(++i);
+							--i; continue;
+						}
+						// object or array begin definition
+						if((c == CHAR_OBJECT_OB || c == CHAR_ARRAY_OB)) {
+							boolean array = c == CHAR_ARRAY_OB;
+							SSDCollection object;
+							if((parent != null)) {
+								object = SSDCollection.empty(array);
+								if((isArray && lastTemp == null)) {
+									lastTemp = Integer.toString(parent.length());
+								}
+								parent.set(lastTemp, object);
+								lastTemp = null;
+							} else {
+								// the main object
+								object = new SSDCollection(null, array);
+							}
+							parents.push(object);
+							parent  = object;
+							isArray = array;
+						}
+						// object or array end definition
+						else if((c == CHAR_OBJECT_CB || c == CHAR_ARRAY_CB)) {
+							if((temp.length() > 0)) {
+								if((isArray && lastTemp == null)) {
+									lastTemp = Integer.toString(parent.length());
+								}
+								SSDObject object = SSDObject.ofRaw(lastTemp, temp.toString());
+								parent.set(lastTemp, object);
+								lastTemp = null;
+								temp.setLength(0);
+							}
+							parent = parents.pop();
+							if(!parents.isEmpty())
+								parent = parents.peek();
+							isArray = parent.getType() == SSDCollectionType.ARRAY;
+						}
+						// item end definition
+						else if((c == CHAR_ITEM_DELIMITER)) {
+							if((temp.length() > 0)) {
+								if((isArray && lastTemp == null)) {
+									lastTemp = Integer.toString(parent.length());
+								}
+								SSDObject object = SSDObject.ofRaw(lastTemp, temp.toString());
+								parent.set(lastTemp, object);
+								lastTemp = null;
+								temp.setLength(0);
+							}
+						}
+						// item name definition
+						else if((c == CHAR_NV_DELIMITER)) {
+							lastTemp = temp.toString();
+							lastTemp = lastTemp.substring(1, lastTemp.length() - 1);
+							temp.setLength(0);
+						}
+						// other characters
+						else cadd = true;
+					}
+				}
+				// add the current character, if possible
+				if((cadd)) temp.append((char) c);
+			}
+			return parent;
+		}
 	}
 }

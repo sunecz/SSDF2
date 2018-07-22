@@ -45,7 +45,7 @@ public class SSDCasting {
 	static Object _castCollection(SSDCollection coll) {
 		if((coll.getType() == SSDCollectionType.OBJECT)) {
 			Map<String, Object> map = new LinkedHashMap<>();
-			for(Entry<String, SSDNode> e : coll.objects().entrySet()) {
+			for(Entry<String, SSDNode> e : coll.objectMap().entrySet()) {
 				String  name = e.getKey();
 				SSDNode node = e.getValue();
 				// Node is an object
@@ -62,7 +62,7 @@ public class SSDCasting {
 			return Collections.unmodifiableMap(map);
 		} else {
 			Set<Object> set = new LinkedHashSet<>();
-			for(SSDNode node : coll.objects().values()) {
+			for(SSDNode node : coll.objectMap().values()) {
 				// Node is an object
 				if((node.isObject())) {
 					set.add(_castObject((SSDObject) node));

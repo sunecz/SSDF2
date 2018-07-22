@@ -175,16 +175,15 @@ public class SSDObject implements SSDNode {
 		return fvalue;
 	}
 	
-	public boolean booleanValue() 				 { return fvalue.booleanValue(); }
-	public byte byteValue() 	  				 { return fvalue.byteValue(); 	 }
-	public short shortValue() 	  				 { return fvalue.shortValue();   }
-	public int intValue() 		  				 { return fvalue.intValue(); 	 }
-	public long longValue() 	  				 { return fvalue.longValue(); 	 }
-	public float floatValue() 	  				 { return fvalue.floatValue();   }
-	public double doubleValue()   				 { return fvalue.doubleValue();  }
-	public String stringValue()   				 { return fvalue.stringValue();  }
-	public Object value() 		 				 { return fvalue.value(); 		 }
-	public <T> T value(Class<? extends T> clazz) { return fvalue.value(clazz); 	 }
+	public boolean booleanValue() { return fvalue.booleanValue(); }
+	public byte byteValue()       { return fvalue.byteValue();    }
+	public short shortValue()     { return fvalue.shortValue();   }
+	public int intValue()         { return fvalue.intValue();     }
+	public long longValue()       { return fvalue.longValue();    }
+	public float floatValue()     { return fvalue.floatValue();   }
+	public double doubleValue()   { return fvalue.doubleValue();  }
+	public String stringValue()   { return fvalue.stringValue();  }
+	public Object value()         { return fvalue.value();        }
 	
 	public void addAnnotation(SSDAnnotation annotation) {
 		// Call the internal method
