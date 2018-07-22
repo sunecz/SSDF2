@@ -1,6 +1,6 @@
 package sune.util.ssdf2;
 
-public class SSDFunctionUtils {
+public final class SSDFunctionUtils {
 	
 	public static final Class<?>[] recognizeClasses(Object... arguments) {
 		int length 		   = arguments.length;
@@ -23,5 +23,8 @@ public class SSDFunctionUtils {
         if(clazz == Double.class) 	 return double.class;
         if(clazz == Void.class) 	 return void.class;
 		return clazz;
+	}
+	
+	private SSDFunctionUtils() {
 	}
 }

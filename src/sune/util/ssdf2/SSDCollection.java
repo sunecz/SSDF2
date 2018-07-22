@@ -19,12 +19,14 @@ import static sune.util.ssdf2.SSDF.WORD_NULL;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -98,22 +100,13 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	void checkIfArray() {
 		if(!isArray) {
-			throw new UnsupportedOperationException(
-				"SSDCollection is not an array!");
-		}
-	}
-	
-	void checkIfObject() {
-		if(isArray) {
-			throw new UnsupportedOperationException(
-				"SSDCollection is not an object!");
+			throw new UnsupportedOperationException("SSDCollection is not an array");
 		}
 	}
 	
 	void checkName(String name) {
-		if(name == null || name.isEmpty()) {
-			throw new IllegalArgumentException(
-				"Name cannot be null nor empty!");
+		if((name == null || name.isEmpty())) {
+			throw new IllegalArgumentException("Name cannot be null or empty");
 		}
 	}
 	
@@ -138,7 +131,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		addObject(name, object);
 	}
 	
-	Map<String, SSDNode> objects() {
+	Map<String, SSDNode> objectMap() {
 		return objects;
 	}
 	
@@ -176,7 +169,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return empty(false);
 	}
 	
-	public static final SSDCollection empty(boolean isArray) {
+	public static final SSDCollection emptyArray() {
+		return empty(true);
+	}
+	
+	static final SSDCollection empty(boolean isArray) {
 		return new SSDCollection(null, "", isArray);
 	}
 	
@@ -264,33 +261,99 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		            : defaultValue;
 	}
 	
-	protected final <T> T getObjectOrDefault(String name, Class<T> clazz, T defaultValue) {
+	protected final boolean getObjectOrDefault(String name, boolean defaultValue) {
 		boolean has = has(name, false, false, false);
-		return  has ? getObject(name).value(clazz)
+		return  has ? getObject(name).booleanValue()
 		            : defaultValue;
 	}
 	
-	protected final <T> T getObjectOrDefault(int index, Class<T> clazz, T defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), clazz, defaultValue);
+	protected final byte getObjectOrDefault(String name, byte defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).byteValue()
+		            : defaultValue;
+	}
+	
+	protected final short getObjectOrDefault(String name, short defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).shortValue()
+		            : defaultValue;
+	}
+	
+	protected final int getObjectOrDefault(String name, int defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).intValue()
+		            : defaultValue;
+	}
+	
+	protected final long getObjectOrDefault(String name, long defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).longValue()
+		            : defaultValue;
+	}
+	
+	protected final float getObjectOrDefault(String name, float defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).floatValue()
+		            : defaultValue;
+	}
+	
+	protected final double getObjectOrDefault(String name, double defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).doubleValue()
+		            : defaultValue;
+	}
+	
+	protected final String getObjectOrDefault(String name, String defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getObject(name).stringValue()
+		            : defaultValue;
+	}
+	
+	protected final boolean getObjectOrDefault(int index, boolean defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final byte getObjectOrDefault(int index, byte defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final short getObjectOrDefault(int index, short defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final int getObjectOrDefault(int index, int defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final long getObjectOrDefault(int index, long defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final float getObjectOrDefault(int index, float defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final double getObjectOrDefault(int index, double defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final String getObjectOrDefault(int index, String defaultValue) {
+		return getObjectOrDefault(Integer.toString(index), defaultValue);
 	}
 	
 	public SSDNode get(String name) {
-		checkIfObject();
 		return get(name, false, false, false);
 	}
 	
 	public SSDObject getObject(String name) {
-		checkIfObject();
 		return (SSDObject) get(name, true, false, false);
 	}
 	
 	public SSDCollection getCollection(String name) {
-		checkIfObject();
 		return (SSDCollection) get(name, false, true, false);
 	}
 	
 	public SSDFunctionCall getFunctionCall(String name) {
-		checkIfObject();
 		return (SSDFunctionCall) get(name, false, false, true);
 	}
 	
@@ -379,55 +442,51 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public SSDNode get(String name, SSDNode defaultValue) {
-		checkIfObject();
 		return getOrDefault(name, false, false, false, defaultValue);
 	}
 	
 	public SSDObject getObject(String name, SSDObject defaultValue) {
-		checkIfObject();
 		return getOrDefault(name, true, false, false, defaultValue);
 	}
 	
 	public SSDCollection getCollection(String name, SSDCollection defaultValue) {
-		checkIfObject();
 		return getOrDefault(name, false, true, false, defaultValue);
 	}
 	
 	public SSDFunctionCall getFunctionCall(String name, SSDFunctionCall defaultValue) {
-		checkIfObject();
 		return getOrDefault(name, false, false, true, defaultValue);
 	}
 	
 	public boolean getBoolean(String name, boolean defaultValue) {
-		return getObjectOrDefault(name, boolean.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public byte getByte(String name, byte defaultValue) {
-		return getObjectOrDefault(name, byte.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public short getShort(String name, short defaultValue) {
-		return getObjectOrDefault(name, short.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public int getInt(String name, int defaultValue) {
-		return getObjectOrDefault(name, int.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public long getLong(String name, long defaultValue) {
-		return getObjectOrDefault(name, long.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public float getFloat(String name, float defaultValue) {
-		return getObjectOrDefault(name, float.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public double getDouble(String name, double defaultValue) {
-		return getObjectOrDefault(name, double.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public String getString(String name, String defaultValue) {
-		return getObjectOrDefault(name, String.class, defaultValue);
+		return getObjectOrDefault(name, defaultValue);
 	}
 	
 	public SSDNode get(int index, SSDNode defaultValue) {
@@ -451,35 +510,35 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public boolean getBoolean(int index, boolean defaultValue) {
-		return getObjectOrDefault(index, boolean.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public byte getByte(int index, byte defaultValue) {
-		return getObjectOrDefault(index, byte.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public short getShort(int index, short defaultValue) {
-		return getObjectOrDefault(index, short.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public int getInt(int index, int defaultValue) {
-		return getObjectOrDefault(index, int.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public long getLong(int index, long defaultValue) {
-		return getObjectOrDefault(index, long.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public float getFloat(int index, float defaultValue) {
-		return getObjectOrDefault(index, float.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public double getDouble(int index, double defaultValue) {
-		return getObjectOrDefault(index, double.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	public String getString(int index, String defaultValue) {
-		return getObjectOrDefault(index, String.class, defaultValue);
+		return getObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final void remove(String name, boolean checkObject, boolean checkCollection,
@@ -568,22 +627,18 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public void remove(String name) {
-		checkIfObject();
 		remove(name, false, false, false);
 	}
 	
 	public void removeObject(String name) {
-		checkIfObject();
 		remove(name, true, false, false);
 	}
 	
 	public void removeCollection(String name) {
-		checkIfObject();
 		remove(name, false, true, false);
 	}
 	
 	public void removeFunctionCall(String name) {
-		checkIfObject();
 		remove(name, false, false, true);
 	}
 	
@@ -636,20 +691,14 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					SSDNode node;
 					if((node = get(nname)) != null
 							&& (node = node.getAnnotation(aname)) != null) {
-						return ((SSDAnnotation) node).get(kname, checkObject,
-						                                  checkCollection,
-						                                  checkFunctionCall)
-													!= null;
+						return ((SSDCollection) node).objects.get(kname) != null;
 					}
 				} else {
 					String cname = name.substring(0, nindex);
 					String oname = name.substring(nindex+1);
 					SSDNode node;
 					if((node = getCollection(cname)) != null) {
-						return ((SSDCollection) node).get(oname, checkObject,
-						                                  checkCollection,
-						                                  checkFunctionCall)
-													!= null;
+						return ((SSDCollection) node).objects.get(oname) != null;
 					}
 				}
 			} else if((aindex > -1)) {
@@ -672,22 +721,18 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public boolean has(String name) {
-		checkIfObject();
 		return has(name, false, false, false);
 	}
 	
 	public boolean hasObject(String name) {
-		checkIfObject();
 		return has(name, true, false, false);
 	}
 	
 	public boolean hasCollection(String name) {
-		checkIfObject();
 		return has(name, false, true, false);
 	}
 	
 	public boolean hasFunctionCall(String name) {
-		checkIfObject();
 		return has(name, false, false, true);
 	}
 	
@@ -893,62 +938,50 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public void setNull(String name) {
-		checkIfObject();
 		set(name, SSDType.NULL, WORD_NULL);
 	}
 	
 	public void set(String name, boolean value) {
-		checkIfObject();
 		set(name, SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void set(String name, byte value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void set(String name, short value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void set(String name, int value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void set(String name, long value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void set(String name, float value) {
-		checkIfObject();
 		set(name, SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void set(String name, double value) {
-		checkIfObject();
 		set(name, SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void set(String name, String value) {
-		checkIfObject();
 		set(name, SSDType.STRING, value);
 	}
 	
 	public void set(String name, SSDObject object) {
-		checkIfObject();
 		set(name, SSDType.UNKNOWN, object);
 	}
 	
 	public void set(String name, SSDCollection collection) {
-		checkIfObject();
 		set(name, SSDType.UNKNOWN, collection);
 	}
 	
 	public void set(String name, SSDFunctionCall funcCall) {
-		checkIfObject();
 		set(name, SSDType.UNKNOWN, funcCall);
 	}
 	
@@ -1013,62 +1046,50 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public void addNull(String name) {
-		checkIfObject();
 		set(name, SSDType.NULL, WORD_NULL);
 	}
 	
 	public void add(String name, boolean value) {
-		checkIfObject();
 		set(name, SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void add(String name, byte value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void add(String name, short value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void add(String name, int value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void add(String name, long value) {
-		checkIfObject();
 		set(name, SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void add(String name, float value) {
-		checkIfObject();
 		set(name, SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void add(String name, double value) {
-		checkIfObject();
 		set(name, SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void add(String name, String value) {
-		checkIfObject();
 		set(name, SSDType.STRING, value);
 	}
 	
 	public void add(String name, SSDObject object) {
-		checkIfObject();
 		set(name, SSDType.UNKNOWN, object);
 	}
 	
 	public void add(String name, SSDCollection collection) {
-		checkIfObject();
 		set(name, SSDType.UNKNOWN, collection);
 	}
 	
 	public void add(String name, SSDFunctionCall funcCall) {
-		checkIfObject();
 		set(name, SSDType.UNKNOWN, funcCall);
 	}
 	
@@ -1603,27 +1624,183 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return toString(depth, compress, true, invoke, false, false);
 	}
 	
-	@Override
-	public Iterator<SSDNode> iterator() {
-		return new SSDCollectionIterator(this);
+	final Iterator<SSDNode> valuesIterator() {
+		return objects.values().iterator();
 	}
 	
-	private static final class SSDCollectionIterator
-			implements Iterator<SSDNode> {
+	@Override
+	public Iterator<SSDNode> iterator() {
+		return new SSDCollectionIterators.SSDNodeIterator(valuesIterator());
+	}
+	
+	final <T> Function<SSDNode, T> genericTypeConverter() {
+		return ((i) -> {
+			@SuppressWarnings("unchecked")
+			T a = (T) i; return a; // just cast the item
+		});
+	}
+	
+	public <T> Iterator<T> iterator(SSDFilter filter) {
+		return iterator(filter, genericTypeConverter());
+	}
+	
+	public <T> Iterator<T> iterator(SSDFilter filter, Function<SSDNode, T> convertor) {
+		return new SSDCollectionIterators
+						.GenericBiTypeIterator<SSDNode, T>(valuesIterator()) {
+			
+			@Override
+			protected boolean isOfCorrectType(SSDNode node) {
+				return filter.accept(node);
+			}
+			
+			@Override
+			protected T castToCorrectType(SSDNode node) {
+				return convertor.apply(node);
+			}
+		};
+	}
+	
+	public Iterator<SSDObject> objectsIterator() {
+		return new SSDCollectionIterators.SSDObjectIterator(valuesIterator());
+	}
+	
+	public Iterator<SSDCollection> collectionsIterator() {
+		return new SSDCollectionIterators.SSDCollectionIterator(valuesIterator());
+	}
+	
+	public <T> Iterable<T> iterable(SSDFilter filter) {
+		return iterable(filter, genericTypeConverter());
+	}
+	
+	public <T> Iterable<T> iterable(SSDFilter filter, Function<SSDNode, T> convertor) {
+		return (() -> iterator(filter, convertor));
+	}
+	
+	public Iterable<SSDObject> objectsIterable() {
+		return iterable(SSDFilter.ONLY_OBJECTS);
+	}
+	
+	public Iterable<SSDCollection> collectionsIterable() {
+		return iterable(SSDFilter.ONLY_COLLECTIONS);
+	}
+	
+	static final <T> Collection<T> iterableToCollection(Iterable<T> iterable) {
+		List<T> collection = new ArrayList<>();
+		iterableToCollection(collection, iterable);
+		return collection;
+	}
+	
+	static final <T> void iterableToCollection(Collection<T> collection, Iterable<T> iterable) {
+		iterable.forEach(collection::add);
+	}
+	
+	public Collection<SSDNode> nodes() {
+		return Collections.unmodifiableCollection(iterableToCollection(this));
+	}
+	
+	public Collection<SSDObject> objects() {
+		return Collections.unmodifiableCollection(iterableToCollection(objectsIterable()));
+	}
+	
+	public Collection<SSDCollection> collections() {
+		return Collections.unmodifiableCollection(iterableToCollection(collectionsIterable()));
+	}
+	
+	private static final class SSDCollectionIterators {
 		
-		final Iterator<SSDNode> iterator;
-		SSDCollectionIterator(SSDCollection collection) {
-			iterator = collection.objects.values().iterator();
+		static final class SSDNodeIterator implements Iterator<SSDNode> {
+			
+			final Iterator<SSDNode> iterator;
+			SSDNodeIterator(Iterator<SSDNode> theIterator) {
+				iterator = theIterator;
+			}
+			
+			@Override
+			public boolean hasNext() {
+				return iterator.hasNext();
+			}
+			
+			@Override
+			public SSDNode next() {
+				return iterator.next();
+			}
 		}
 		
-		@Override
-		public boolean hasNext() {
-			return iterator.hasNext();
+		static abstract class GenericBiTypeIterator<A, B> implements Iterator<B> {
+			
+			final Iterator<A> iterator;
+			boolean hasNext;
+			A lastItem;
+			
+			GenericBiTypeIterator(Iterator<A> theIterator) {
+				iterator = theIterator;
+			}
+			
+			protected abstract boolean isOfCorrectType(A node);
+			protected abstract B castToCorrectType(A node);
+			
+			@Override
+			public boolean hasNext() {
+				while((hasNext = iterator.hasNext())
+						&& !isOfCorrectType(lastItem = iterator.next()));
+				if(!hasNext) lastItem = null; // important to reset
+				return hasNext && isOfCorrectType(lastItem);
+			}
+			
+			@Override
+			public B next() {
+				// happens at the beginning or when out of items
+				if((lastItem == null && !hasNext)) {
+					// if there are items, it happened at the beginning
+					if((iterator.hasNext())) {
+						// return the next item
+						return castToCorrectType(lastItem = iterator.next());
+					}
+					// otherwise follow the documentation
+					throw new NoSuchElementException();
+				}
+				// happens when hasNext() has been called at least once
+				else {
+					// return the next item
+					return castToCorrectType(lastItem);
+				}
+			}
 		}
-
-		@Override
-		public SSDNode next() {
-			return iterator.next();
+		
+		static final class SSDObjectIterator
+				extends GenericBiTypeIterator<SSDNode, SSDObject> {
+			
+			SSDObjectIterator(Iterator<SSDNode> theIterator) {
+				super(theIterator);
+			}
+			
+			@Override
+			protected final boolean isOfCorrectType(SSDNode node) {
+				return node instanceof SSDObject;
+			}
+			
+			@Override
+			protected final SSDObject castToCorrectType(SSDNode node) {
+				return (SSDObject) node;
+			}
+		}
+		
+		static final class SSDCollectionIterator
+				extends GenericBiTypeIterator<SSDNode, SSDCollection> {
+			
+			SSDCollectionIterator(Iterator<SSDNode> theIterator) {
+				super(theIterator);
+			}
+			
+			@Override
+			protected final boolean isOfCorrectType(SSDNode node) {
+				return node instanceof SSDCollection;
+			}
+			
+			@Override
+			protected final SSDCollection castToCorrectType(SSDNode node) {
+				return (SSDCollection) node;
+			}
 		}
 	}
 }

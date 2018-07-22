@@ -29,7 +29,7 @@ public class SSDAnnotation extends SSDCollection {
 	}
 	
 	public static final SSDAnnotation of(String name, SSDCollection data) {
-		return new SSDAnnotation(name, data.objects());
+		return new SSDAnnotation(name, data.objectMap());
 	}
 	
 	@Override
@@ -74,7 +74,7 @@ public class SSDAnnotation extends SSDCollection {
 	public SSDAnnotation copy() {
 		// Copy properly all the annotation's objects
 		Map<String, SSDNode> copyObj = new LinkedHashMap<>();
-		for(Entry<String, SSDNode> e : objects().entrySet()) {
+		for(Entry<String, SSDNode> e : objectMap().entrySet()) {
 			String  name 	 = e.getKey();
 			SSDNode node 	 = e.getValue();
 			SSDNode copyNode = copyNode(node);
@@ -115,7 +115,7 @@ public class SSDAnnotation extends SSDCollection {
 		buffer.append(CHAR_ANNOTATION_SIGN);
 		buffer.append(getName());
 		Collection<SSDNode> nodes;
-		if(!(nodes = objects().values()).isEmpty()) {
+		if(!(nodes = objectMap().values()).isEmpty()) {
 			buffer.append(CHAR_ANNOTATION_OB);
 			boolean first = true;
 			for(SSDNode node : nodes) {
@@ -135,7 +135,7 @@ public class SSDAnnotation extends SSDCollection {
 							if((annf)) {
 								annf = false;
 							} else {
-								if((ann.objects().isEmpty()) || !compress)
+								if((ann.objectMap().isEmpty()) || !compress)
 									buffer.append(CHAR_SPACE);
 							}
 							buffer.append(json ? ann.toJSON(depth, compress, invoke)
