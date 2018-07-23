@@ -201,9 +201,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					SSDNode item1 = get(name1, checkObject, checkCollection, checkFunctionCall);
 					return  item1;
 				}
-				// Throw an exception, if node is not found
-				throw new NotFoundException(
-					"Node " + name + " does not exist!");
+				// throw an exception, if node is not found
+				throw new NotFoundException("Node " + name + " does not exist!");
 			}
 		} else {
 			if((nindex > -1)) {
@@ -225,16 +224,15 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 			} else if((aindex > -1)) {
 				String nname = name.substring(0, aindex);
 				String aname = name.substring(aindex+1);
-				if(checkObject)
-					throw new NotFoundException(
-						"Object " + name + " is not a SSDObject!");
+				if((checkObject))
+					throw new NotFoundException("Object " + name + " is not a SSDObject!");
 				return get(nname).getAnnotation(aname);
 			} else {
-				SSDNode node = objects.get(name);
-				if((node == null)) {
+				if(!has(name, false, false, false)) {
 					// throw an exception, if node is not found
 					throw new NotFoundException("Node " + name + " does not exist!");
 				}
+				SSDNode node = objects.get(name);
 				if(checkObject
 						&& !(node instanceof SSDObject))
 					throw new TypeMismatchException(
