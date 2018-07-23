@@ -25,15 +25,15 @@ public class Finstance implements SSDFunctionImpl {
 				Object value = field.get(instance);
 				if((value.getClass().isArray())) {
 					value = SSDFunctionImpl.toArray(SSDFunctionImpl.toObjectArray(value));
-					coll.add(name, (SSDCollection) value);
+					coll.set(name, (SSDCollection) value);
 				} else if(value instanceof List) {
 					value = SSDFunctionImpl.toArray((List<?>) value);
-					coll.add(name, (SSDCollection) value);
+					coll.set(name, (SSDCollection) value);
 				} else if(value instanceof Map) {
 					value = SSDFunctionImpl.toArray((Map<?, ?>) value);
-					coll.add(name, (SSDCollection) value);
+					coll.set(name, (SSDCollection) value);
 				} else {
-					coll.add(name, SSDFunctionImpl.object(name, value));
+					coll.set(name, SSDFunctionImpl.object(name, value));
 				}
 			} catch(Exception ex) {
 			}
@@ -52,9 +52,9 @@ public class Finstance implements SSDFunctionImpl {
 			// Add annotation for information
 			SSDCollection coll = _toCollection(clazz, c.newInstance(args));
 			SSDCollection annd = SSDCollection.empty();
-			annd.add("class", path);
+			annd.set("class", path);
 			if((args.length > 0))
-				annd.add("args", SSDFunctionImpl.toArray(args));
+				annd.set("args", SSDFunctionImpl.toArray(args));
 			// Add the Instance annotation
 			coll.addAnnotation(SSDAnnotation.of("Instance", annd));
 			return coll;

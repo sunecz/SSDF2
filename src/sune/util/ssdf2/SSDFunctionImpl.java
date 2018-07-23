@@ -88,17 +88,17 @@ public interface SSDFunctionImpl {
 			String sname = name == null ? WORD_NULL : name.toString();
 			if(value != null) {
 				if(value.getClass().isArray()) {
-					coll.add(sname, toArray(toObjectArray(value)));
+					coll.set(sname, toArray(toObjectArray(value)));
 				} else if(value instanceof List) {
-					coll.add(sname, toArray((List<?>) value));
+					coll.set(sname, toArray((List<?>) value));
 				} else if(value instanceof Map) {
-					coll.add(sname, toArray((Map<?, ?>) value));
+					coll.set(sname, toArray((Map<?, ?>) value));
 				} else if(value instanceof Set) {
-					coll.add(sname, toArray((Set<?>) value));
+					coll.set(sname, toArray((Set<?>) value));
 				} else {
-					coll.add(sname, object("", value));
+					coll.set(sname, object("", value));
 				}
-			} else coll.addNull(sname);
+			} else coll.setNull(sname);
 		}
 		return coll;
 	}

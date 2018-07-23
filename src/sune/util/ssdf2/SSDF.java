@@ -826,7 +826,7 @@ public final class SSDF {
 			SSDCollection        parent   = null;
 			boolean              isArray  = false;
 			// read the characters and construct the objects
-			for(int i = off, l = off + len, c; i < l; ++i) {
+			read: for(int i = off, l = off + len, c; i < l; ++i) {
 				cadd = true;
 				c 	 = content.charAt(i);
 				// escape logic
@@ -842,8 +842,16 @@ public final class SSDF {
 						cadd = false;
 						// remove useless whitespace characters
 						if((Character.isWhitespace(c))) {
-							while(Character.isWhitespace(c))
+							do {
+								if((i + 1 >= len))
+									// end of the string
+									break read;
 								c = content.charAt(++i);
+							}
+							// loop while the character is whitespace
+							while(Character.isWhitespace(c));
+							// go back one character, and continue the read loop
+							// to process the next non-whitespace character
 							--i; continue;
 						}
 						// object or array begin definition
@@ -855,7 +863,7 @@ public final class SSDF {
 								if((isArray && lastTemp == null)) {
 									lastTemp = Integer.toString(parent.length());
 								}
-								parent.set(lastTemp, object);
+								parent.setDirect(lastTemp, object);
 								lastTemp = null;
 							} else {
 								// the main object
@@ -872,7 +880,7 @@ public final class SSDF {
 									lastTemp = Integer.toString(parent.length());
 								}
 								SSDObject object = SSDObject.ofRaw(lastTemp, temp.toString());
-								parent.set(lastTemp, object);
+								parent.setDirect(lastTemp, object);
 								lastTemp = null;
 								temp.setLength(0);
 							}
@@ -888,7 +896,7 @@ public final class SSDF {
 									lastTemp = Integer.toString(parent.length());
 								}
 								SSDObject object = SSDObject.ofRaw(lastTemp, temp.toString());
-								parent.set(lastTemp, object);
+								parent.setDirect(lastTemp, object);
 								lastTemp = null;
 								temp.setLength(0);
 							}

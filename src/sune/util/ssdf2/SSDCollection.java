@@ -230,12 +230,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 						"Object " + name + " is not a SSDObject!");
 				return get(nname).getAnnotation(aname);
 			} else {
-				if(!has(name, false, false, false)) {
-					// Throw an exception, if node is not found
-					throw new NotFoundException(
-						"Node " + name + " does not exist!");
-				}
 				SSDNode node = objects.get(name);
+				if((node == null)) {
+					// throw an exception, if node is not found
+					throw new NotFoundException("Node " + name + " does not exist!");
+				}
 				if(checkObject
 						&& !(node instanceof SSDObject))
 					throw new TypeMismatchException(
@@ -254,11 +253,340 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	@SuppressWarnings("unchecked")
+	protected final <T> T get_cast(String name, boolean checkObject, boolean checkCollection,
+			boolean checkFunctionCall) {
+		return (T) get(name, checkObject, checkCollection, checkFunctionCall);
+	}
+	
+	// used especially for JSON
+	protected final SSDNode getDirect(String name, boolean checkObject, boolean checkCollection,
+			boolean checkFunctionCall) {
+		checkName(name);
+		SSDNode node = objects.get(name);
+		if((node == null)) {
+			// throw an exception, if node is not found
+			throw new NotFoundException("Node " + name + " does not exist!");
+		}
+		if(checkObject
+				&& !(node instanceof SSDObject))
+			throw new TypeMismatchException(
+				"Object " + name + " is not a SSDObject!");
+		if(checkCollection
+				&& !(node instanceof SSDCollection))
+			throw new TypeMismatchException(
+				"Object " + name + " is not a SSDCollection!");
+		if(checkFunctionCall
+				&& !(node instanceof SSDFunctionCall))
+			throw new TypeMismatchException(
+				"Object " + name + " is not a SSDFunctionCall!");
+		return node;
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected final <T> T getDirect_cast(String name, boolean checkObject, boolean checkCollection,
+			boolean checkFunctionCall) {
+		return (T) getDirect(name, checkObject, checkCollection, checkFunctionCall);
+	}
+	
+	public SSDNode getDirect(String name) {
+		return getDirect(name, false, false, false);
+	}
+	
+	public SSDObject getDirectObject(String name) {
+		return getDirect_cast(name, true, false, false);
+	}
+	
+	public SSDCollection getDirectCollection(String name) {
+		return getDirect_cast(name, false, true, false);
+	}
+	
+	public SSDFunctionCall getDirectFunctionCall(String name) {
+		return getDirect_cast(name, false, false, true);
+	}
+	
+	public boolean getDirectBoolean(String name) {
+		return getDirectObject(name).booleanValue();
+	}
+	
+	public byte getDirectByte(String name) {
+		return getDirectObject(name).byteValue();
+	}
+	
+	public short getDirectShort(String name) {
+		return getDirectObject(name).shortValue();
+	}
+	
+	public int getDirectInt(String name) {
+		return getDirectObject(name).intValue();
+	}
+	
+	public long getDirectLong(String name) {
+		return getDirectObject(name).longValue();
+	}
+	
+	public float getDirectFloat(String name) {
+		return getDirectObject(name).floatValue();
+	}
+	
+	public double getDirectDouble(String name) {
+		return getDirectObject(name).doubleValue();
+	}
+	
+	public String getDirectString(String name) {
+		return getDirectObject(name).stringValue();
+	}
+	
+	public SSDNode get(String name) {
+		return get(name, false, false, false);
+	}
+	
+	public SSDObject getObject(String name) {
+		return get_cast(name, true, false, false);
+	}
+	
+	public SSDCollection getCollection(String name) {
+		return get_cast(name, false, true, false);
+	}
+	
+	public SSDFunctionCall getFunctionCall(String name) {
+		return get_cast(name, false, false, true);
+	}
+	
+	public boolean getBoolean(String name) {
+		return getObject(name).booleanValue();
+	}
+	
+	public byte getByte(String name) {
+		return getObject(name).byteValue();
+	}
+	
+	public short getShort(String name) {
+		return getObject(name).shortValue();
+	}
+	
+	public int getInt(String name) {
+		return getObject(name).intValue();
+	}
+	
+	public long getLong(String name) {
+		return getObject(name).longValue();
+	}
+	
+	public float getFloat(String name) {
+		return getObject(name).floatValue();
+	}
+	
+	public double getDouble(String name) {
+		return getObject(name).doubleValue();
+	}
+	
+	public String getString(String name) {
+		return getObject(name).stringValue();
+	}
+	
+	public SSDNode get(int index) {
+		checkIfArray();
+		return getDirect(Integer.toString(index), false, false, false);
+	}
+	
+	public SSDObject getObject(int index) {
+		checkIfArray();
+		return getDirect_cast(Integer.toString(index), true, false, false);
+	}
+	
+	public SSDCollection getCollection(int index) {
+		checkIfArray();
+		return getDirect_cast(Integer.toString(index), false, true, false);
+	}
+	
+	public SSDFunctionCall getFunctionCall(int index) {
+		checkIfArray();
+		return getDirect_cast(Integer.toString(index), false, false, true);
+	}
+	
+	public boolean getBoolean(int index) {
+		return getObject(index).booleanValue();
+	}
+	
+	public byte getByte(int index) {
+		return getObject(index).byteValue();
+	}
+	
+	public short getShort(int index) {
+		return getObject(index).shortValue();
+	}
+	
+	public int getInt(int index) {
+		return getObject(index).intValue();
+	}
+	
+	public long getLong(int index) {
+		return getObject(index).longValue();
+	}
+	
+	public float getFloat(int index) {
+		return getObject(index).floatValue();
+	}
+	
+	public double getDouble(int index) {
+		return getObject(index).doubleValue();
+	}
+	
+	public String getString(int index) {
+		return getObject(index).stringValue();
+	}
+	
+	@SuppressWarnings("unchecked")
 	protected final <T> T getOrDefault(String name, boolean checkObject, boolean checkCollection,
 				boolean checkFunctionCall, T defaultValue) {
 		boolean has = has(name, false, false, false);
 		return  has ? (T) get(name, checkCollection, checkCollection, checkFunctionCall)
 		            : defaultValue;
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected final <T> T getOrDefault(int index, boolean checkObject, boolean checkCollection,
+				boolean checkFunctionCall, T defaultValue) {
+		String  ind = Integer.toString(index);
+		boolean has = hasDirect(ind, false, false, false);
+		return  has ? (T) getDirect(ind, checkCollection, checkCollection, checkFunctionCall)
+		            : defaultValue;
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected final <T> T getDirectOrDefault(String name, boolean checkObject, boolean checkCollection,
+				boolean checkFunctionCall, T defaultValue) {
+		boolean has = hasDirect(name, false, false, false);
+		return  has ? (T) getDirect(name, checkCollection, checkCollection, checkFunctionCall)
+		            : defaultValue;
+	}
+	
+	protected final boolean getDirectObjectOrDefault(String name, boolean defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).booleanValue()
+		            : defaultValue;
+	}
+	
+	protected final byte getDirectObjectOrDefault(String name, byte defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).byteValue()
+		            : defaultValue;
+	}
+	
+	protected final short getDirectObjectOrDefault(String name, short defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).shortValue()
+		            : defaultValue;
+	}
+	
+	protected final int getDirectObjectOrDefault(String name, int defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).intValue()
+		            : defaultValue;
+	}
+	
+	protected final long getDirectObjectOrDefault(String name, long defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).longValue()
+		            : defaultValue;
+	}
+	
+	protected final float getDirectObjectOrDefault(String name, float defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).floatValue()
+		            : defaultValue;
+	}
+	
+	protected final double getDirectObjectOrDefault(String name, double defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).doubleValue()
+		            : defaultValue;
+	}
+	
+	protected final String getDirectObjectOrDefault(String name, String defaultValue) {
+		boolean has = has(name, false, false, false);
+		return  has ? getDirectObject(name).stringValue()
+		            : defaultValue;
+	}
+	
+	protected final boolean getDirectObjectOrDefault(int index, boolean defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final byte getDirectObjectOrDefault(int index, byte defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final short getDirectObjectOrDefault(int index, short defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final int getDirectObjectOrDefault(int index, int defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final long getDirectObjectOrDefault(int index, long defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final float getDirectObjectOrDefault(int index, float defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final double getDirectObjectOrDefault(int index, double defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	protected final String getDirectObjectOrDefault(int index, String defaultValue) {
+		return getDirectObjectOrDefault(Integer.toString(index), defaultValue);
+	}
+	
+	public SSDNode getDirect(String name, SSDNode defaultValue) {
+		return getDirectOrDefault(name, false, false, false, defaultValue);
+	}
+	
+	public SSDObject getDirectObject(String name, SSDObject defaultValue) {
+		return getDirectOrDefault(name, true, false, false, defaultValue);
+	}
+	
+	public SSDCollection getDirectCollection(String name, SSDCollection defaultValue) {
+		return getDirectOrDefault(name, false, true, false, defaultValue);
+	}
+	
+	public SSDFunctionCall getDirectFunctionCall(String name, SSDFunctionCall defaultValue) {
+		return getDirectOrDefault(name, false, false, true, defaultValue);
+	}
+	
+	public boolean getDirectBoolean(String name, boolean defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public byte getDirectByte(String name, byte defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public short getDirectShort(String name, short defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public int getDirectInt(String name, int defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public long getDirectLong(String name, long defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public float getDirectFloat(String name, float defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public double getDirectDouble(String name, double defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
+	}
+	
+	public String getDirectString(String name, String defaultValue) {
+		return getDirectObjectOrDefault(name, defaultValue);
 	}
 	
 	protected final boolean getObjectOrDefault(String name, boolean defaultValue) {
@@ -310,135 +638,35 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	protected final boolean getObjectOrDefault(int index, boolean defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final byte getObjectOrDefault(int index, byte defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final short getObjectOrDefault(int index, short defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final int getObjectOrDefault(int index, int defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final long getObjectOrDefault(int index, long defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final float getObjectOrDefault(int index, float defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final double getObjectOrDefault(int index, double defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	protected final String getObjectOrDefault(int index, String defaultValue) {
-		return getObjectOrDefault(Integer.toString(index), defaultValue);
-	}
-	
-	public SSDNode get(String name) {
-		return get(name, false, false, false);
-	}
-	
-	public SSDObject getObject(String name) {
-		return (SSDObject) get(name, true, false, false);
-	}
-	
-	public SSDCollection getCollection(String name) {
-		return (SSDCollection) get(name, false, true, false);
-	}
-	
-	public SSDFunctionCall getFunctionCall(String name) {
-		return (SSDFunctionCall) get(name, false, false, true);
-	}
-	
-	public boolean getBoolean(String name) {
-		return getObject(name).booleanValue();
-	}
-	
-	public byte getByte(String name) {
-		return getObject(name).byteValue();
-	}
-	
-	public short getShort(String name) {
-		return getObject(name).shortValue();
-	}
-	
-	public int getInt(String name) {
-		return getObject(name).intValue();
-	}
-	
-	public long getLong(String name) {
-		return getObject(name).longValue();
-	}
-	
-	public float getFloat(String name) {
-		return getObject(name).floatValue();
-	}
-	
-	public double getDouble(String name) {
-		return getObject(name).doubleValue();
-	}
-	
-	public String getString(String name) {
-		return getObject(name).stringValue();
-	}
-	
-	public SSDNode get(int index) {
-		checkIfArray();
-		return get(Integer.toString(index), false, false, false);
-	}
-	
-	public SSDObject getObject(int index) {
-		checkIfArray();
-		return (SSDObject) get(Integer.toString(index), true, false, false);
-	}
-	
-	public SSDCollection getCollection(int index) {
-		checkIfArray();
-		return (SSDCollection) get(Integer.toString(index), false, true, false);
-	}
-	
-	public SSDFunctionCall getFunctionCall(int index) {
-		checkIfArray();
-		return (SSDFunctionCall) get(Integer.toString(index), false, false, true);
-	}
-	
-	public boolean getBoolean(int index) {
-		return getObject(index).booleanValue();
-	}
-	
-	public byte getByte(int index) {
-		return getObject(index).byteValue();
-	}
-	
-	public short getShort(int index) {
-		return getObject(index).shortValue();
-	}
-	
-	public int getInt(int index) {
-		return getObject(index).intValue();
-	}
-	
-	public long getLong(int index) {
-		return getObject(index).longValue();
-	}
-	
-	public float getFloat(int index) {
-		return getObject(index).floatValue();
-	}
-	
-	public double getDouble(int index) {
-		return getObject(index).doubleValue();
-	}
-	
-	public String getString(int index) {
-		return getObject(index).stringValue();
+		return getDirectObjectOrDefault(index, defaultValue);
 	}
 	
 	public SSDNode get(String name, SSDNode defaultValue) {
@@ -491,22 +719,22 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public SSDNode get(int index, SSDNode defaultValue) {
 		checkIfArray();
-		return getOrDefault(Integer.toString(index), false, false, false, defaultValue);
+		return getOrDefault(index, false, false, false, defaultValue);
 	}
 	
 	public SSDObject getObject(int index, SSDObject defaultValue) {
 		checkIfArray();
-		return getOrDefault(Integer.toString(index), true, false, false, defaultValue);
+		return getOrDefault(index, true, false, false, defaultValue);
 	}
 	
 	public SSDCollection getCollection(int index, SSDCollection defaultValue) {
 		checkIfArray();
-		return getOrDefault(Integer.toString(index), false, true, false, defaultValue);
+		return getOrDefault(index, false, true, false, defaultValue);
 	}
 	
 	public SSDFunctionCall getFunctionCall(int index, SSDFunctionCall defaultValue) {
 		checkIfArray();
-		return getOrDefault(Integer.toString(index), false, false, true, defaultValue);
+		return getOrDefault(index, false, false, true, defaultValue);
 	}
 	
 	public boolean getBoolean(int index, boolean defaultValue) {
@@ -626,6 +854,52 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		}
 	}
 	
+	// used especially for JSON
+	protected final void removeDirect(String name, boolean checkObject, boolean checkCollection,
+			boolean checkFunctionCall) {
+		checkName(name);
+		SSDNode node = objects.get(name);
+		if(checkObject
+				&& !(node instanceof SSDObject))
+			throw new TypeMismatchException(
+				"Object " + name + " is not a SSDObject!");
+		if(checkCollection
+				&& !(node instanceof SSDCollection))
+			throw new TypeMismatchException(
+				"Object " + name + " is not a SSDCollection!");
+		if(checkFunctionCall
+				&& !(node instanceof SSDFunctionCall))
+			throw new TypeMismatchException(
+				"Object " + name + " is not a SSDFunctionCall!");
+		objects.remove(name);
+		if(isArray) {
+			// Recreate objects to ensure that indexes are correct
+			int counter = 0;
+			Map<String, SSDNode> nodes = new LinkedHashMap<>();
+			for(SSDNode n : objects.values()) {
+				nodes.put(Integer.toString(counter++), n);
+			}
+			objects.clear();
+			objects.putAll(nodes);
+		}
+	}
+	
+	public void removeDirect(String name) {
+		removeDirect(name, false, false, false);
+	}
+	
+	public void removeDirectObject(String name) {
+		removeDirect(name, true, false, false);
+	}
+	
+	public void removeDirectCollection(String name) {
+		removeDirect(name, false, true, false);
+	}
+	
+	public void removeDirectFunctionCall(String name) {
+		removeDirect(name, false, false, true);
+	}
+	
 	public void remove(String name) {
 		remove(name, false, false, false);
 	}
@@ -644,22 +918,22 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void remove(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), false, false, false);
+		removeDirect(Integer.toString(index), false, false, false);
 	}
 	
 	public void removeObject(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), true, false, false);
+		removeDirect(Integer.toString(index), true, false, false);
 	}
 	
 	public void removeCollection(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), false, true, false);
+		removeDirect(Integer.toString(index), false, true, false);
 	}
 	
 	public void removeFunctionCall(int index) {
 		checkIfArray();
-		remove(Integer.toString(index), false, false, true);
+		removeDirect(Integer.toString(index), false, false, true);
 	}
 	
 	protected final boolean has(String name, boolean checkObject, boolean checkCollection,
@@ -720,6 +994,64 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		}
 	}
 	
+	// used especially for JSON
+	protected final boolean hasDirect(String name, boolean checkObject, boolean checkCollection,
+			boolean checkFunctionCall) {
+		checkName(name);
+		SSDNode node = objects.get(name);
+		if((checkObject 	  && !(node instanceof SSDObject))     ||
+		   (checkCollection   && !(node instanceof SSDCollection)) ||
+		   (checkFunctionCall && !(node instanceof SSDFunctionCall)))
+			return false;
+		return node != null;
+	}
+	
+	public boolean hasDirect(String name) {
+		return hasDirect(name, false, false, false);
+	}
+	
+	public boolean hasDirectObject(String name) {
+		return hasDirect(name, true, false, false);
+	}
+	
+	public boolean hasDirectCollection(String name) {
+		return hasDirect(name, false, true, false);
+	}
+	
+	public boolean hasDirectFunctionCall(String name) {
+		return hasDirect(name, false, false, true);
+	}
+	
+	public boolean hasDirectNull(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.NULL;
+	}
+	
+	public boolean hasDirectBoolean(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.BOOLEAN;
+	}
+	
+	public boolean hasDirectInteger(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.INTEGER;
+	}
+	
+	public boolean hasDirectDecimal(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.DECIMAL;
+	}
+	
+	public boolean hasDirectString(String name) {
+		SSDObject obj = getObject(name);
+		return obj != null &&
+			   obj.getType() == SSDType.STRING;
+	}
+	
 	public boolean has(String name) {
 		return has(name, false, false, false);
 	}
@@ -768,22 +1100,22 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public boolean has(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), false, false, false);
+		return hasDirect(Integer.toString(index), false, false, false);
 	}
 	
 	public boolean hasObject(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), true, false, false);
+		return hasDirect(Integer.toString(index), true, false, false);
 	}
 	
 	public boolean hasCollection(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), false, true, false);
+		return hasDirect(Integer.toString(index), false, true, false);
 	}
 	
 	public boolean hasFunctionCall(int index) {
 		checkIfArray();
-		return has(Integer.toString(index), false, false, true);
+		return hasDirect(Integer.toString(index), false, false, true);
 	}
 	
 	public boolean hasNull(int index) {
@@ -914,8 +1246,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 						n.addAnnotation(a);
 					}
 				} else {
-					throw new TypeMismatchException(
-						"Value is not a SSDAnnotation!");
+					throw new TypeMismatchException("Value is not a SSDAnnotation!");
 				}
 			} else {
 				SSDNode node = null;
@@ -935,6 +1266,74 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 				if((node != null)) objects.put(name, node);
 			}
 		}
+	}
+	
+	// used especially for JSON
+	protected final void setDirect(String name, SSDType type, Object value) {
+		checkName(name);
+		SSDNode node = null;
+		if((value instanceof SSDCollection)) {
+			SSDCollection n = (SSDCollection) value;
+			n.name  .set(name);
+			n.parent.set(this);
+			node = n;
+		} else if(value instanceof SSDObject) {
+			SSDObject n = (SSDObject) value;
+			n.name  .set(name);
+			n.parent.set(this);
+			node = n;
+		} else if(value instanceof String) {
+			node = type.createObject(this, name, (String) value);
+		}
+		if((node != null)) objects.put(name, node);
+	}
+	
+	public void setDirectNull(String name) {
+		setDirect(name, SSDType.NULL, WORD_NULL);
+	}
+	
+	public void setDirect(String name, boolean value) {
+		setDirect(name, SSDType.BOOLEAN, Boolean.toString(value));
+	}
+	
+	public void setDirect(String name, byte value) {
+		setDirect(name, SSDType.INTEGER, Byte.toString(value));
+	}
+	
+	public void setDirect(String name, short value) {
+		setDirect(name, SSDType.INTEGER, Short.toString(value));
+	}
+	
+	public void setDirect(String name, int value) {
+		setDirect(name, SSDType.INTEGER, Integer.toString(value));
+	}
+	
+	public void setDirect(String name, long value) {
+		setDirect(name, SSDType.INTEGER, Long.toString(value));
+	}
+	
+	public void setDirect(String name, float value) {
+		setDirect(name, SSDType.DECIMAL, Float.toString(value));
+	}
+	
+	public void setDirect(String name, double value) {
+		setDirect(name, SSDType.DECIMAL, Double.toString(value));
+	}
+	
+	public void setDirect(String name, String value) {
+		setDirect(name, SSDType.STRING, value);
+	}
+	
+	public void setDirect(String name, SSDObject object) {
+		setDirect(name, SSDType.UNKNOWN, object);
+	}
+	
+	public void setDirect(String name, SSDCollection collection) {
+		setDirect(name, SSDType.UNKNOWN, collection);
+	}
+	
+	public void setDirect(String name, SSDFunctionCall funcCall) {
+		setDirect(name, SSDType.UNKNOWN, funcCall);
 	}
 	
 	public void setNull(String name) {
@@ -987,178 +1386,133 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	
 	public void setNull(int index) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.NULL, WORD_NULL);
+		setDirect(Integer.toString(index), SSDType.NULL, WORD_NULL);
 	}
 	
 	public void set(int index, boolean value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.BOOLEAN, Boolean.toString(value));
+		setDirect(Integer.toString(index), SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void set(int index, byte value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Byte.toString(value));
+		setDirect(Integer.toString(index), SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void set(int index, short value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Short.toString(value));
+		setDirect(Integer.toString(index), SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void set(int index, int value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Integer.toString(value));
+		setDirect(Integer.toString(index), SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void set(int index, long value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.INTEGER, Long.toString(value));
+		setDirect(Integer.toString(index), SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void set(int index, float value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.DECIMAL, Float.toString(value));
+		setDirect(Integer.toString(index), SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void set(int index, double value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.DECIMAL, Double.toString(value));
+		setDirect(Integer.toString(index), SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void set(int index, String value) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.STRING, value);
+		setDirect(Integer.toString(index), SSDType.STRING, value);
 	}
 	
 	public void set(int index, SSDObject object) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.UNKNOWN, object);
+		setDirect(Integer.toString(index), SSDType.UNKNOWN, object);
 	}
 	
 	public void set(int index, SSDCollection collection) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.UNKNOWN, collection);
+		setDirect(Integer.toString(index), SSDType.UNKNOWN, collection);
 	}
 	
 	public void set(int index, SSDFunctionCall funcCall) {
 		checkIfArray();
-		set(Integer.toString(index), SSDType.UNKNOWN, funcCall);
-	}
-	
-	public void addNull(String name) {
-		set(name, SSDType.NULL, WORD_NULL);
-	}
-	
-	public void add(String name, boolean value) {
-		set(name, SSDType.BOOLEAN, Boolean.toString(value));
-	}
-	
-	public void add(String name, byte value) {
-		set(name, SSDType.INTEGER, Byte.toString(value));
-	}
-	
-	public void add(String name, short value) {
-		set(name, SSDType.INTEGER, Short.toString(value));
-	}
-	
-	public void add(String name, int value) {
-		set(name, SSDType.INTEGER, Integer.toString(value));
-	}
-	
-	public void add(String name, long value) {
-		set(name, SSDType.INTEGER, Long.toString(value));
-	}
-	
-	public void add(String name, float value) {
-		set(name, SSDType.DECIMAL, Float.toString(value));
-	}
-	
-	public void add(String name, double value) {
-		set(name, SSDType.DECIMAL, Double.toString(value));
-	}
-	
-	public void add(String name, String value) {
-		set(name, SSDType.STRING, value);
-	}
-	
-	public void add(String name, SSDObject object) {
-		set(name, SSDType.UNKNOWN, object);
-	}
-	
-	public void add(String name, SSDCollection collection) {
-		set(name, SSDType.UNKNOWN, collection);
-	}
-	
-	public void add(String name, SSDFunctionCall funcCall) {
-		set(name, SSDType.UNKNOWN, funcCall);
+		setDirect(Integer.toString(index), SSDType.UNKNOWN, funcCall);
 	}
 	
 	public void addNull() {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.NULL, WORD_NULL);
+		setDirect(Integer.toString(nextIndex()), SSDType.NULL, WORD_NULL);
 	}
 	
 	public void add(boolean value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.BOOLEAN, Boolean.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.BOOLEAN, Boolean.toString(value));
 	}
 	
 	public void add(byte value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Byte.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.INTEGER, Byte.toString(value));
 	}
 	
 	public void add(short value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Short.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.INTEGER, Short.toString(value));
 	}
 	
 	public void add(int value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Integer.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.INTEGER, Integer.toString(value));
 	}
 	
 	public void add(long value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.INTEGER, Long.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.INTEGER, Long.toString(value));
 	}
 	
 	public void add(float value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.DECIMAL, Float.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.DECIMAL, Float.toString(value));
 	}
 	
 	public void add(double value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.DECIMAL, Double.toString(value));
+		setDirect(Integer.toString(nextIndex()), SSDType.DECIMAL, Double.toString(value));
 	}
 	
 	public void add(String value) {
 		checkIfArray();
-		set(Integer.toString(nextIndex()), SSDType.STRING, value);
+		setDirect(Integer.toString(nextIndex()), SSDType.STRING, value);
 	}
 	
 	public void add(SSDObject object) {
-		set(isArray ? Integer.toString(nextIndex())
-		            : object != null
-		            	? object.getName()
-		            	: Integer.toString(nextIndex()),
+		checkIfArray();
+		setDirect(isArray ? Integer.toString(nextIndex())
+		                  : object != null
+		                  		? object.getName()
+		                  		: Integer.toString(nextIndex()),
 		    SSDType.UNKNOWN, object);
 	}
 	
 	public void add(SSDCollection collection) {
-		set(isArray ? Integer.toString(nextIndex())
-		            : collection != null
-		            	? collection.getName()
-		            	: Integer.toString(nextIndex()),
+		checkIfArray();
+		setDirect(isArray ? Integer.toString(nextIndex())
+		                  : collection != null
+		                  		? collection.getName()
+		                  		: Integer.toString(nextIndex()),
 		    SSDType.UNKNOWN, collection);
 	}
 	
 	public void add(SSDFunctionCall funcCall) {
-		set(isArray ? Integer.toString(nextIndex())
-		            : funcCall != null
-		            	? funcCall.getName()
-		            	: Integer.toString(nextIndex()),
+		checkIfArray();
+		setDirect(isArray ? Integer.toString(nextIndex())
+		                  : funcCall != null
+		                  		? funcCall.getName()
+		                  		: Integer.toString(nextIndex()),
 		    SSDType.UNKNOWN, funcCall);
 	}
 	
@@ -1178,13 +1532,8 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public SSDCollectionType getType() {
-		return isArray ? SSDCollectionType.ARRAY :
-						 SSDCollectionType.OBJECT;
-	}
-	
-	public SSDNode[] getNodes() {
-		Collection<SSDNode> c = objects.values();
-		return c.toArray(new SSDNode[c.size()]);
+		return isArray ? SSDCollectionType.ARRAY
+		               : SSDCollectionType.OBJECT;
 	}
 	
 	@Override
