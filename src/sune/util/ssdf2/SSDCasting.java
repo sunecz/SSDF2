@@ -15,14 +15,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- * This is an experimental class. Use it with caution!
- */
-public class SSDCasting {
+ * This is an experimental class. Use it with caution!*/
+public final class SSDCasting {
 	
 	private static final String ANNOTATION_CAST_EACH = "CastEach";
 	
-	// Cast an object to its true value that it represents
-	static Object _castObject(SSDObject object) {
+	// cast an object to its true value that it represents
+	static final Object _castObject(SSDObject object) {
 		switch(object.getType()) {
 			case BOOLEAN:
 				return object.getFormattedValue().booleanValue();
@@ -32,54 +31,54 @@ public class SSDCasting {
 				return object.getFormattedValue().doubleValue();
 			case STRING:
 			case STRING_VAR:
-			// Also the unknown type should return some value
+			// also the unknown type should return a value
 			case UNKNOWN:
 				return object.getFormattedValue().stringValue();
 			case NULL:
 				return null;
 		}
-		// For a special exception that should not happen
+		// this should not happen
 		return null;
 	}
 	
-	static Object _castCollection(SSDCollection coll) {
+	static final Object _castCollection(SSDCollection coll) {
 		if((coll.getType() == SSDCollectionType.OBJECT)) {
 			Map<String, Object> map = new LinkedHashMap<>();
 			for(Entry<String, SSDNode> e : coll.objectMap().entrySet()) {
 				String  name = e.getKey();
 				SSDNode node = e.getValue();
-				// Node is an object
+				// node is an object
 				if((node.isObject())) {
 					map.put(name, _castObject((SSDObject) node));
 				}
-				// Node is a collection
+				// node is a collection
 				else if((node.isCollection())) {
 					map.put(name, _castCollection((SSDCollection) node));
 				}
-				// For other cases do not add anything to the map
+				// for other cases do not add anything to the map
 			}
-			// Convert to an unmodifiable map
+			// convert to an unmodifiable map
 			return Collections.unmodifiableMap(map);
 		} else {
 			Set<Object> set = new LinkedHashSet<>();
 			for(SSDNode node : coll.objectMap().values()) {
-				// Node is an object
+				// node is an object
 				if((node.isObject())) {
 					set.add(_castObject((SSDObject) node));
 				}
-				// Node is a collection
+				// node is a collection
 				else if((node.isCollection())) {
 					set.add(_castCollection((SSDCollection) node));
 				}
-				// For other cases do not add anything to the set
+				// for other cases do not add anything to the set
 			}
-			// Convert to an unmodifiable set
+			// convert to an unmodifiable set
 			return Collections.unmodifiableSet(set);
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> T cast(Class<T> clazz, SSDCollection args)
+	public static final <T> T cast(Class<T> clazz, SSDCollection args)
 			throws InstantiationException,
 				   IllegalAccessException,
 				   IllegalArgumentException,
@@ -100,7 +99,7 @@ public class SSDCasting {
 							vals[index++] = ((SSDObject) node).getFormattedValue().value();
 						} else if((node.isCollection())) {
 							Object val = _castCollection((SSDCollection) node);
-							// Convert a set to an object array
+							// convert a set to an object array
 							if((val instanceof Set)) {
 								Set<?> set = (Set<?>) val;
 								val = set.toArray(new Object[set.size()]);
@@ -117,7 +116,7 @@ public class SSDCasting {
 		return null;
 	}
 	
-	public static <T> T[] tryCast(SSDCollection coll) {
+	public static final <T> T[] tryCast(SSDCollection coll) {
 		if((coll.hasAnnotation(ANNOTATION_CAST_EACH))) {
 			String clazzName = coll.getAnnotation(ANNOTATION_CAST_EACH)
 								   .getString(WORD_ANNOTATION_DEFAULT);
@@ -129,17 +128,31 @@ public class SSDCasting {
 				int index	  = 0;
 				for(SSDCollection item : array) {	
 					@SuppressWarnings("unchecked")
-					T inst = (T) SSDCasting.cast(clazz, item);
+					T inst = (T) cast(clazz, item);
 					castArray[index++] = inst;
 				}
-				// Return the array with casted items
+				// return the array with casted items
 				return castArray;
 			} catch(Exception ex) {
-				// Throw Cast Exception
+				// throw Class Cast Exception
 				throw new ClassCastException(ex.getLocalizedMessage());
 			}
 		}
-		// Collection cannot be casted
+		// collection cannot be casted
 		return null;
+	}
+	
+	public static final <T> T tryCast(SSDObject object) {
+		try {
+			@SuppressWarnings("unchecked")
+			T inst = (T) _castObject(object);
+			return inst;
+		} catch(Exception ex) {
+			// throw Class Cast Exception
+			throw new ClassCastException(ex.getLocalizedMessage());
+		}
+	}
+	
+	private SSDCasting() {
 	}
 }

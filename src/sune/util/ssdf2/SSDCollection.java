@@ -228,11 +228,11 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					throw new NotFoundException("Object " + name + " is not a SSDObject!");
 				return get(nname).getAnnotation(aname);
 			} else {
-				if(!has(name, false, false, false)) {
+				SSDNode node = objects.get(name);
+				if((node == null)) {
 					// throw an exception, if node is not found
 					throw new NotFoundException("Node " + name + " does not exist!");
 				}
-				SSDNode node = objects.get(name);
 				if(checkObject
 						&& !(node instanceof SSDObject))
 					throw new TypeMismatchException(
@@ -1440,6 +1440,42 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	public void set(int index, SSDFunctionCall funcCall) {
 		checkIfArray();
 		setDirect(Integer.toString(index), SSDType.UNKNOWN, funcCall);
+	}
+	
+	public void addNull(String name) {
+		set(name, SSDType.NULL, WORD_NULL);
+	}
+	
+	public void add(String name, boolean value) {
+		set(name, SSDType.BOOLEAN, Boolean.toString(value));
+	}
+	
+	public void add(String name, byte value) {
+		set(name, SSDType.INTEGER, Byte.toString(value));
+	}
+	
+	public void add(String name, short value) {
+		set(name, SSDType.INTEGER, Short.toString(value));
+	}
+	
+	public void add(String name, int value) {
+		set(name, SSDType.INTEGER, Integer.toString(value));
+	}
+	
+	public void add(String name, long value) {
+		set(name, SSDType.INTEGER, Long.toString(value));
+	}
+	
+	public void add(String name, float value) {
+		set(name, SSDType.DECIMAL, Float.toString(value));
+	}
+	
+	public void add(String name, double value) {
+		set(name, SSDType.DECIMAL, Double.toString(value));
+	}
+	
+	public void add(String name, String value) {
+		set(name, SSDType.STRING, value);
 	}
 	
 	public void addNull() {

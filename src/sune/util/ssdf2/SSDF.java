@@ -16,50 +16,50 @@ import java.util.Set;
 public final class SSDF {
 	
 	// General characters
-	static final char CHAR_NEWLINE              = '\n';
-	static final char CHAR_TAB                  = '\t';
-	static final char CHAR_SPACE                = ' ';
-	static final char CHAR_NAME_DELIMITER       = '.';
-	static final char CHAR_ANNOTATION_DELIMITER = ':';
-	static final char CHAR_AND_DELIMITER        = '&';
-	static final char CHAR_OR_DELIMITER         = '|';
+	static final char CHAR_NEWLINE                   = '\n';
+	static final char CHAR_TAB                       = '\t';
+	static final char CHAR_SPACE                     = ' ';
+	static final char CHAR_NAME_DELIMITER            = '.';
+	static final char CHAR_ANNOTATION_DELIMITER      = ':';
+	static final char CHAR_AND_DELIMITER             = '&';
+	static final char CHAR_OR_DELIMITER              = '|';
 	// General syntax
-	static final char CHAR_OBJECT_OB 	  = '{';
-	static final char CHAR_OBJECT_CB 	  = '}';
-	static final char CHAR_ARRAY_OB 	  = '[';
-	static final char CHAR_ARRAY_CB 	  = ']';
-	static final char CHAR_NV_DELIMITER	  = ':';
-	static final char CHAR_ITEM_DELIMITER = ',';
-	static final char CHAR_DOUBLE_QUOTES  = '"';
-	static final char CHAR_SINGLE_QUOTES  = '\'';
-	static final char CHAR_ESCAPE		  = '\\';
+	static final char CHAR_OBJECT_OB                 = '{';
+	static final char CHAR_OBJECT_CB                 = '}';
+	static final char CHAR_ARRAY_OB                  = '[';
+	static final char CHAR_ARRAY_CB                  = ']';
+	static final char CHAR_NV_DELIMITER              = ':';
+	static final char CHAR_ITEM_DELIMITER            = ',';
+	static final char CHAR_DOUBLE_QUOTES             = '"';
+	static final char CHAR_SINGLE_QUOTES             = '\'';
+	static final char CHAR_ESCAPE                    = '\\';
 	// Annotation syntax
-	static final char CHAR_ANNOTATION_SIGN 			 = '@';
-	static final char CHAR_ANNOTATION_OB   			 = '(';
-	static final char CHAR_ANNOTATION_CB   			 = ')';
-	static final char CHAR_ANNOTATION_NV_DELIMITER 	 = '=';
+	static final char CHAR_ANNOTATION_SIGN           = '@';
+	static final char CHAR_ANNOTATION_OB             = '(';
+	static final char CHAR_ANNOTATION_CB             = ')';
+	static final char CHAR_ANNOTATION_NV_DELIMITER   = '=';
 	static final char CHAR_ANNOTATION_ITEM_DELIMITER = ',';
 	// Function call syntax
-	static final char CHAR_FUNCCALL_OB 			   = '(';
-	static final char CHAR_FUNCCALL_CB 			   = ')';
-	static final char CHAR_FUNCCALL_ARGS_DELIMITER = ',';
+	static final char CHAR_FUNCCALL_OB               = '(';
+	static final char CHAR_FUNCCALL_CB               = ')';
+	static final char CHAR_FUNCCALL_ARGS_DELIMITER   = ',';
 	// Variable syntax
-	static final char CHAR_VARIABLE_SIGN   	  = '$';
-	static final char CHAR_VARIABLE_DELIMITER = '.';
-	static final char CHAR_VARIABLE_CONCAT 	  = '+';
+	static final char CHAR_VARIABLE_SIGN             = '$';
+	static final char CHAR_VARIABLE_DELIMITER        = '.';
+	static final char CHAR_VARIABLE_CONCAT           = '+';
 	// Comment syntax
-	static final char CHAR_COMMENT_FIRST 		  = '/';
-	static final char CHAR_COMMENT_ONE_LINE 	  = '/';
-	static final char CHAR_COMMENT_MULTIPLE_LINES = '*';
+	static final char CHAR_COMMENT_FIRST             = '/';
+	static final char CHAR_COMMENT_ONE_LINE          = '/';
+	static final char CHAR_COMMENT_MULTIPLE_LINES    = '*';
 	// Syntax special words
-	static final String WORD_NULL  = "null";
-	static final String WORD_TRUE  = "true";
-	static final String WORD_FALSE = "false";
+	static final String WORD_NULL                    = "null";
+	static final String WORD_TRUE                    = "true";
+	static final String WORD_FALSE                   = "false";
 	// Other special words
-	static final String WORD_ANNOTATION_DEFAULT = "value";
-	static final String WORD_VARIABLE_VALUE		= "value";
-	static final String WORD_VARIABLE_THIS		= "this";
-	static final String WORD_VARIABLE_MAIN		= "main";
+	static final String WORD_ANNOTATION_DEFAULT      = "value";
+	static final String WORD_VARIABLE_VALUE          = "value";
+	static final String WORD_VARIABLE_THIS           = "this";
+	static final String WORD_VARIABLE_MAIN           = "main";
 	
 	// Forbid anyone to create an instance of this class
 	private SSDF() {
