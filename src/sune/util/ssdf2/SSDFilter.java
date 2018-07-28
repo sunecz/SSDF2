@@ -11,6 +11,7 @@ import static sune.util.ssdf2.SSDType.UNKNOWN;
 public interface SSDFilter {
 	
 	// Pre-defined filters
+	public static final SSDFilter ONLY_NODES       = ((n) -> true);
 	public static final SSDFilter ONLY_COLLECTIONS = ((n) -> n.isCollection());
 	public static final SSDFilter ONLY_OBJECTS 	   = ((n) -> n.isObject());
 	
