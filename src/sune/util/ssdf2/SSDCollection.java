@@ -438,7 +438,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	protected final <T> T getOrDefault(String name, boolean checkObject, boolean checkCollection,
 				boolean checkFunctionCall, T defaultValue) {
 		boolean has = has(name, false, false, false);
-		return  has ? (T) get(name, checkCollection, checkCollection, checkFunctionCall)
+		return  has ? (T) get(name, checkObject, checkCollection, checkFunctionCall)
 		            : defaultValue;
 	}
 	
@@ -447,7 +447,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 				boolean checkFunctionCall, T defaultValue) {
 		String  ind = Integer.toString(index);
 		boolean has = hasDirect(ind, false, false, false);
-		return  has ? (T) getDirect(ind, checkCollection, checkCollection, checkFunctionCall)
+		return  has ? (T) getDirect(ind, checkObject, checkCollection, checkFunctionCall)
 		            : defaultValue;
 	}
 	
@@ -455,7 +455,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	protected final <T> T getDirectOrDefault(String name, boolean checkObject, boolean checkCollection,
 				boolean checkFunctionCall, T defaultValue) {
 		boolean has = hasDirect(name, false, false, false);
-		return  has ? (T) getDirect(name, checkCollection, checkCollection, checkFunctionCall)
+		return  has ? (T) getDirect(name, checkObject, checkCollection, checkFunctionCall)
 		            : defaultValue;
 	}
 	
