@@ -144,7 +144,7 @@ public class SSDFunctionCall extends SSDObject {
 		// Copy properly all the arguments
 		Set<SSDNode> copyArgs = new LinkedHashSet<>();
 		for(SSDNode n : funcArgs)
-			copyArgs.add(SSDCollection.copyNode(n));
+			copyArgs.add(n.copy());
 		return new SSDFunctionCall(getParent(),
 		                           getName(),
 		                           funcName,

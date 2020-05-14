@@ -77,7 +77,7 @@ public class SSDAnnotation extends SSDCollection {
 		for(Entry<String, SSDNode> e : objectMap().entrySet()) {
 			String  name 	 = e.getKey();
 			SSDNode node 	 = e.getValue();
-			SSDNode copyNode = copyNode(node);
+			SSDNode copyNode = node.copy();
 			if((copyNode != null))
 				copyObj.put(name, copyNode);
 		}
