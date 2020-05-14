@@ -1021,33 +1021,28 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public boolean hasDirectNull(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.NULL;
+		return hasDirectObject(name)
+					&& getDirectObject(name).getType() == SSDType.NULL;
 	}
 	
 	public boolean hasDirectBoolean(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.BOOLEAN;
+		return hasDirectObject(name)
+					&& getDirectObject(name).getType() == SSDType.BOOLEAN;
 	}
 	
 	public boolean hasDirectInteger(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.INTEGER;
+		return hasDirectObject(name)
+					&& getDirectObject(name).getType() == SSDType.INTEGER;
 	}
 	
 	public boolean hasDirectDecimal(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.DECIMAL;
+		return hasDirectObject(name)
+					&& getDirectObject(name).getType() == SSDType.DECIMAL;
 	}
 	
 	public boolean hasDirectString(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.STRING;
+		return hasDirectObject(name)
+					&& getDirectObject(name).getType() == SSDType.STRING;
 	}
 	
 	public boolean has(String name) {
@@ -1067,33 +1062,28 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public boolean hasNull(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.NULL;
+		return hasObject(name)
+					&& getObject(name).getType() == SSDType.NULL;
 	}
 	
 	public boolean hasBoolean(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.BOOLEAN;
+		return hasObject(name)
+					&& getObject(name).getType() == SSDType.BOOLEAN;
 	}
 	
 	public boolean hasInteger(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.INTEGER;
+		return hasObject(name)
+					&& getObject(name).getType() == SSDType.INTEGER;
 	}
 	
 	public boolean hasDecimal(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.DECIMAL;
+		return hasObject(name)
+					&& getObject(name).getType() == SSDType.DECIMAL;
 	}
 	
 	public boolean hasString(String name) {
-		SSDObject obj = getObject(name);
-		return obj != null &&
-			   obj.getType() == SSDType.STRING;
+		return hasObject(name)
+					&& getObject(name).getType() == SSDType.STRING;
 	}
 	
 	public boolean has(int index) {
@@ -1117,33 +1107,28 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 	}
 	
 	public boolean hasNull(int index) {
-		SSDObject obj = getObject(index);
-		return obj != null &&
-			   obj.getType() == SSDType.NULL;
+		return hasObject(index)
+					&& getObject(index).getType() == SSDType.NULL;
 	}
 	
 	public boolean hasBoolean(int index) {
-		SSDObject obj = getObject(index);
-		return obj != null &&
-			   obj.getType() == SSDType.BOOLEAN;
+		return hasObject(index)
+					&& getObject(index).getType() == SSDType.BOOLEAN;
 	}
 	
 	public boolean hasInteger(int index) {
-		SSDObject obj = getObject(index);
-		return obj != null &&
-			   obj.getType() == SSDType.INTEGER;
+		return hasObject(index)
+					&& getObject(index).getType() == SSDType.INTEGER;
 	}
 	
 	public boolean hasDecimal(int index) {
-		SSDObject obj = getObject(index);
-		return obj != null &&
-			   obj.getType() == SSDType.DECIMAL;
+		return hasObject(index)
+					&& getObject(index).getType() == SSDType.DECIMAL;
 	}
 	
 	public boolean hasString(int index) {
-		SSDObject obj = getObject(index);
-		return obj != null &&
-			   obj.getType() == SSDType.STRING;
+		return hasObject(index)
+					&& getObject(index).getType() == SSDType.STRING;
 	}
 	
 	protected final void set(String name, SSDType type, Object value) {
