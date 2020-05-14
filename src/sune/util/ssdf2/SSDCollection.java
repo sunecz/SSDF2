@@ -1760,27 +1760,6 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return comments.toArray(new SSDComment[comments.size()]);
 	}
 	
-	final static SSDNode copyNode(SSDNode node) {
-		// Collections
-		if((node instanceof SSDCollection)) {
-			return ((SSDCollection) node).copy();
-		}
-		// Objects
-		else if((node instanceof SSDObject)) {
-			return ((SSDObject) node).copy();
-		}
-		// Annotations
-		else if((node instanceof SSDAnnotation)) {
-			return ((SSDAnnotation) node).copy();
-		}
-		// Function calls
-		else if((node instanceof SSDFunctionCall)) {
-			return ((SSDFunctionCall) node).copy();
-		}
-		// Node cannot be copied
-		return null;
-	}
-	
 	@Override
 	public SSDCollection copy() {
 		// Copy properly all the collection's objects
@@ -1788,7 +1767,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		for(Entry<String, SSDNode> e : objects.entrySet()) {
 			String  name 	 = e.getKey();
 			SSDNode node 	 = e.getValue();
-			SSDNode copyNode = copyNode(node);
+			SSDNode copyNode = node.copy();
 			if((copyNode != null))
 				copyObj.put(name, copyNode);
 		}

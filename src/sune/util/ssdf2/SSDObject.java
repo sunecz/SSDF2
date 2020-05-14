@@ -357,7 +357,7 @@ public class SSDObject implements SSDNode {
 				if((epar instanceof SSDAnnotation
 						&& path.equals(WORD_VARIABLE_VALUE))) {
 					// Do not return the original node, make a copy
-					npar = SSDCollection.copyNode(npar);
+					npar = npar.copy();
 					// Remove the annotation from the parent since this
 					// would cause recursion
 					SSDAnnotation ann = (SSDAnnotation) epar;
@@ -375,7 +375,7 @@ public class SSDObject implements SSDNode {
 				if((npar instanceof SSDCollection)) {
 					SSDCollection parent = (SSDCollection) npar;
 					// Do not return the original node, make a copy
-					return SSDCollection.copyNode(parent.get(path));
+					return parent.get(path).copy();
 				}
 			}
 		}
