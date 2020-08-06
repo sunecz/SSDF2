@@ -19,6 +19,10 @@ public interface SSDNode {
 	String toJSON(boolean compress, boolean invoke);
 	String toJSON(int depth, boolean compress, boolean invoke);
 	// Annotations
+	void addAnnotation(SSDAnnotation annotation);
+	boolean hasAnnotation(String name);
+	void removeAnnotation(String name);
+	void removeAnnotation(SSDAnnotation annotation);
 	SSDAnnotation getAnnotation(String name);
 	SSDAnnotation[] getAnnotations();
 	SSDAnnotation[] getAnnotations(String name);
