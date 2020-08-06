@@ -960,35 +960,47 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 					String nname = name.substring(0, aindex);
 					String aname = name.substring(aindex+1, nindex);
 					String kname = name.substring(nindex+1);
-					SSDNode node;
-					if((node = get(nname)) != null
-							&& (node = node.getAnnotation(aname)) != null) {
-						return ((SSDCollection) node).objects.get(kname) != null;
-					}
+					SSDAnnotation ann;
+					if(!has(nname, false, false, false) // Check first, so no error is thrown
+							|| !(ann = get(nname).getAnnotation(aname)).hasAnnotation(aname))
+						return false;
+					// Finally check solely on the annotation itself
+					return ann.has(kname, checkObject,
+					               checkCollection,
+					               checkFunctionCall);
 				} else {
 					String cname = name.substring(0, nindex);
 					String oname = name.substring(nindex+1);
-					SSDNode node;
-					if((node = getCollection(cname)) != null) {
-						return ((SSDCollection) node).objects.get(oname) != null;
-					}
+					return has(cname, false, false, false) // Check first, so no error is thrown
+								&& getCollection(cname).has(oname, checkObject,
+								                            checkCollection,
+								                            checkFunctionCall);
 				}
 			} else if((aindex > -1)) {
 				String nname = name.substring(0, aindex);
 				String aname = name.substring(aindex+1);
-				SSDNode node;
-				if((node = get(nname)) != null) {
-					return node.getAnnotation(aname) != null;
-				}
+				if((checkObject))
+					throw new NotFoundException("Object " + name + " is not a SSDObject!");
+				return has(nname) // Check first, so no error is thrown
+							&& get(nname).hasAnnotation(aname);
 			} else {
 				SSDNode node = objects.get(name);
-				if((checkObject 	  && !(node instanceof SSDObject))     ||
-				   (checkCollection   && !(node instanceof SSDCollection)) ||
-				   (checkFunctionCall && !(node instanceof SSDFunctionCall)))
+				if((node == null))
 					return false;
-				return node != null;
+				if((checkObject
+						&& !(node instanceof SSDObject)))
+					throw new TypeMismatchException(
+						"Object " + name + " is not a SSDObject!");
+				if((checkCollection
+						&& !(node instanceof SSDCollection)))
+					throw new TypeMismatchException(
+						"Object " + name + " is not a SSDCollection!");
+				if((checkFunctionCall
+						&& !(node instanceof SSDFunctionCall)))
+					throw new TypeMismatchException(
+						"Object " + name + " is not a SSDFunctionCall!");
+				return true;
 			}
-			return false;
 		}
 	}
 	
@@ -1675,15 +1687,18 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		return toTypeList(objects.values(), TypeFunctions.objects());
 	}
 	
+	@Override
 	public void addAnnotation(SSDAnnotation annotation) {
 		// Call the internal method
 		addAnnotation0(annotation);
 	}
 	
+	@Override
 	public boolean hasAnnotation(String name) {
 		return getAnnotation(name) != null;
 	}
 	
+	@Override
 	public void removeAnnotation(String name) {
 		for(Iterator<SSDAnnotation> i = annotations.iterator();
 				i.hasNext();) {
@@ -1694,6 +1709,7 @@ public class SSDCollection implements SSDNode, Iterable<SSDNode> {
 		}
 	}
 	
+	@Override
 	public void removeAnnotation(SSDAnnotation annotation) {
 		// Just remove the annotation
 		annotations.remove(annotation);

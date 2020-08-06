@@ -185,15 +185,18 @@ public class SSDObject implements SSDNode {
 	public String stringValue()   { return fvalue.stringValue();  }
 	public Object value()         { return fvalue.value();        }
 	
+	@Override
 	public void addAnnotation(SSDAnnotation annotation) {
 		// Call the internal method
 		addAnnotation0(annotation);
 	}
 	
+	@Override
 	public boolean hasAnnotation(String name) {
 		return getAnnotation(name) != null;
 	}
 	
+	@Override
 	public void removeAnnotation(String name) {
 		for(Iterator<SSDAnnotation> i = annotations.iterator();
 				i.hasNext();) {
@@ -204,6 +207,7 @@ public class SSDObject implements SSDNode {
 		}
 	}
 	
+	@Override
 	public void removeAnnotation(SSDAnnotation annotation) {
 		// Just remove the annotation
 		annotations.remove(annotation);
